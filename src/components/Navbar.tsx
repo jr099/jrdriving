@@ -22,25 +22,26 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
   };
 
   const navItems = user
-    ? profile?.role === 'admin'
-      ? [
-          { name: 'Accueil', page: 'home' },
-          { name: 'Services', page: 'services' },
-          { name: 'Administration', page: 'admin' },
-          { name: 'Contact', page: 'contact' },
-        ]
-      : profile?.role === 'driver'
-      ? [
-          { name: 'Accueil', page: 'home' },
-          { name: 'Mes Missions', page: 'driver' },
-          { name: 'Contact', page: 'contact' },
-        ]
-      : [
-          { name: 'Accueil', page: 'home' },
-          { name: 'Services', page: 'services' },
-          { name: 'Espace client', page: 'client' },
-          { name: 'Contact', page: 'contact' },
-        ]
+    ? [
+        { name: 'Accueil', page: 'home' },
+        { name: 'Tableaux de bord', page: 'dashboards' },
+        ...(profile?.role === 'admin'
+          ? [
+              { name: 'Services', page: 'services' },
+              { name: 'Administration', page: 'admin' },
+              { name: 'Contact', page: 'contact' },
+            ]
+          : profile?.role === 'driver'
+          ? [
+              { name: 'Mes Missions', page: 'driver' },
+              { name: 'Contact', page: 'contact' },
+            ]
+          : [
+              { name: 'Services', page: 'services' },
+              { name: 'Espace client', page: 'client' },
+              { name: 'Contact', page: 'contact' },
+            ]),
+      ]
     : [
         { name: 'Accueil', page: 'home' },
         { name: 'Services', page: 'services' },

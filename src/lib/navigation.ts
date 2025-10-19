@@ -6,6 +6,7 @@ export type AppPage =
   | 'quote'
   | 'contact'
   | 'login'
+  | 'dashboards'
   | 'client'
   | 'driver'
   | 'admin'
@@ -19,6 +20,7 @@ export const PAGE_TO_PATH: Record<AppPage, string> = {
   quote: '/devis',
   contact: '/contact',
   login: '/login',
+  dashboards: '/tableaux-de-bord',
   client: '/client',
   driver: '/chauffeur',
   admin: '/admin',
@@ -34,6 +36,7 @@ const ALIAS_TO_PAGE: Record<string, AppPage> = {
   admin: 'admin',
   contact: 'contact',
   login: 'login',
+  'tableaux-de-bord': 'dashboards',
   services: 'services',
   'mentions-legales': 'legal',
   'conditions-generales': 'terms',

@@ -13,13 +13,15 @@ import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import NotFound from './pages/NotFound';
 import ClientDashboard from './pages/ClientDashboard';
-import { requireRole } from './lib/auth';
+import DashboardSelector from './pages/DashboardSelector';
+import { requireAuth, requireRole } from './lib/auth';
 import { usePageNavigation } from './hooks/usePageNavigation';
 import { createRedirect } from './lib/redirect';
 import {
   CLIENT_DASHBOARD_PATH,
   DRIVER_DASHBOARD_PATH,
   ADMIN_DASHBOARD_PATH,
+  DASHBOARD_SELECTOR_PATH,
 } from './routes.constants';
 
 function withNavigation<P extends { onNavigate: (page: string) => void }>(Component: ComponentType<P>) {
@@ -44,6 +46,11 @@ export const routesConfig = [
       { path: 'devis', element: <QuoteRoute /> },
       { path: 'contact', element: <Contact /> },
       { path: 'login', element: <LoginRoute /> },
+      {
+        path: DASHBOARD_SELECTOR_PATH,
+        loader: ({ request }) => requireAuth(request),
+        element: <DashboardSelector />,
+      },
       {
         path: CLIENT_DASHBOARD_PATH,
         loader: ({ request }) => requireRole(request, 'client'),

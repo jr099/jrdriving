@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { LogIn, UserPlus, Truck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase, type ProfileRole } from '../lib/supabase';
-import { getRoleDefaultPage } from '../lib/navigation';
+import type { ProfileRole } from '../lib/supabase';
 
 type LoginProps = {
   onNavigate: (page: string) => void;
@@ -22,28 +21,8 @@ export default function Login({ onNavigate }: LoginProps) {
 
   const { signIn, signUp } = useAuth();
 
-  const redirectToRole = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      onNavigate(getRoleDefaultPage('client'));
-      return;
-    }
-
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    const role =
-      (profileData?.role as ProfileRole | undefined) ??
-      (user.user_metadata?.role as ProfileRole | undefined) ??
-      'client';
-
-    onNavigate(getRoleDefaultPage(role));
+  const redirectToDashboardSelector = () => {
+    onNavigate('dashboards');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,10 +33,10 @@ export default function Login({ onNavigate }: LoginProps) {
     try {
       if (isLogin) {
         await signIn(formData.email, formData.password);
-        await redirectToRole();
+        redirectToDashboardSelector();
       } else {
         await signUp(formData.email, formData.password, formData.fullName, formData.phone, formData.role);
-        onNavigate(getRoleDefaultPage(formData.role));
+        redirectToDashboardSelector();
       }
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue');
