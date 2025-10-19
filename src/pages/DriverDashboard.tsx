@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Truck, Clock, MapPin, DollarSign, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
-import { supabase, Mission } from '../lib/supabase';
+import { supabase, type Mission } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import {
+  normalizeMissionStatus,
+  missionStatusToDatabase,
+  getMissionStatusLabel,
+  getMissionStatusBadgeClass,
+  type NormalizedMissionStatus,
+} from '../lib/missions';
 
 export default function DriverDashboard() {
   const { profile } = useAuth();
@@ -42,10 +49,11 @@ export default function DriverDashboard() {
       if (error) throw error;
 
       setMissions(missionsData || []);
+      const missionList = missionsData ?? [];
       setStats({
-        totalMissions: driverData.total_missions || 0,
-        inProgress: (missionsData || []).filter((m: Mission) => m.status === 'in_progress').length,
-        completed: (missionsData || []).filter((m: Mission) => m.status === 'completed').length,
+        totalMissions: driverData.total_missions || missionList.length || 0,
+        inProgress: missionList.filter((m: Mission) => normalizeMissionStatus(m.status) === 'in_progress').length,
+        completed: missionList.filter((m: Mission) => normalizeMissionStatus(m.status) === 'done').length,
         totalKm: driverData.total_kilometers || 0,
       });
     } catch (error) {
@@ -55,13 +63,18 @@ export default function DriverDashboard() {
     }
   };
 
-  const updateMissionStatus = async (missionId: string, newStatus: Mission['status']) => {
+  const updateMissionStatus = async (
+    missionId: string,
+    newStatus: NormalizedMissionStatus
+  ) => {
     try {
-      const updates: any = { status: newStatus };
+      const updates: Record<string, unknown> = {
+        status: missionStatusToDatabase(newStatus),
+      };
 
       if (newStatus === 'in_progress') {
         updates.actual_start_time = new Date().toISOString();
-      } else if (newStatus === 'completed') {
+      } else if (newStatus === 'done') {
         updates.actual_end_time = new Date().toISOString();
       }
 
@@ -75,40 +88,6 @@ export default function DriverDashboard() {
       loadMissions();
     } catch (error) {
       console.error('Error updating mission:', error);
-    }
-  };
-
-  const getStatusColor = (status: Mission['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'assigned':
-        return 'bg-blue-100 text-blue-800';
-      case 'in_progress':
-        return 'bg-orange-100 text-orange-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusText = (status: Mission['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'En attente';
-      case 'assigned':
-        return 'Assignée';
-      case 'in_progress':
-        return 'En cours';
-      case 'completed':
-        return 'Terminée';
-      case 'cancelled':
-        return 'Annulée';
-      default:
-        return status;
     }
   };
 
@@ -187,16 +166,20 @@ export default function DriverDashboard() {
             </div>
           ) : (
             <div className="divide-y">
-              {missions.map((mission) => (
-                <div key={mission.id} className="p-6 hover:bg-gray-50 transition-colors">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex-1 mb-4 lg:mb-0">
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="font-mono font-semibold text-slate-900">
-                          {mission.mission_number}
-                        </span>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(mission.status)}`}>
-                          {getStatusText(mission.status)}
+              {missions.map((mission) => {
+                const status = normalizeMissionStatus(mission.status);
+                return (
+                  <div key={mission.id} className="p-6 hover:bg-gray-50 transition-colors">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                      <div className="flex-1 mb-4 lg:mb-0">
+                        <div className="flex items-center gap-3 mb-3">
+                          <span className="font-mono font-semibold text-slate-900">
+                            {mission.mission_number}
+                          </span>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getMissionStatusBadgeClass(status)}`}
+                        >
+                          {getMissionStatusLabel(status)}
                         </span>
                         {mission.priority === 'express' && (
                           <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
@@ -259,7 +242,7 @@ export default function DriverDashboard() {
                     </div>
 
                     <div className="flex lg:flex-col gap-2 lg:ml-6">
-                      {mission.status === 'assigned' && (
+                      {status === 'assigned' && (
                         <button
                           onClick={() => updateMissionStatus(mission.id, 'in_progress')}
                           className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-lg transition-colors"
@@ -267,9 +250,9 @@ export default function DriverDashboard() {
                           Démarrer
                         </button>
                       )}
-                      {mission.status === 'in_progress' && (
+                      {status === 'in_progress' && (
                         <button
-                          onClick={() => updateMissionStatus(mission.id, 'completed')}
+                          onClick={() => updateMissionStatus(mission.id, 'done')}
                           className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors"
                         >
                           Terminer
@@ -278,7 +261,8 @@ export default function DriverDashboard() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

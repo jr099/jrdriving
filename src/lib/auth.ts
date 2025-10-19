@@ -1,5 +1,5 @@
 import type { User } from '@supabase/supabase-js';
-import { supabase, type Profile } from './supabase';
+import { supabase, type Profile, type ProfileRole } from './supabase';
 import { getRoleRedirectPath } from './navigation';
 import { createRedirect } from './redirect';
 
@@ -52,7 +52,7 @@ export async function requireAuth(request: Request): Promise<AuthSession> {
 
 export async function requireRole(
   request: Request,
-  role: Profile['role'] | Profile['role'][]
+  role: ProfileRole | ProfileRole[]
 ): Promise<AuthSession> {
   const allowedRoles = Array.isArray(role) ? role : [role];
   const auth = await requireAuth(request);

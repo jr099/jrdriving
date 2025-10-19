@@ -16,6 +16,11 @@ import ClientDashboard from './pages/ClientDashboard';
 import { requireRole } from './lib/auth';
 import { usePageNavigation } from './hooks/usePageNavigation';
 import { createRedirect } from './lib/redirect';
+import {
+  CLIENT_DASHBOARD_PATH,
+  DRIVER_DASHBOARD_PATH,
+  ADMIN_DASHBOARD_PATH,
+} from './routes.constants';
 
 function withNavigation<P extends { onNavigate: (page: string) => void }>(Component: ComponentType<P>) {
   return function ComponentWithNavigation(props: Omit<P, 'onNavigate'>) {
@@ -29,7 +34,7 @@ const ServicesRoute = withNavigation(Services);
 const QuoteRoute = withNavigation(Quote);
 const LoginRoute = withNavigation(Login);
 
-export const router = createBrowserRouter([
+export const routesConfig = [
   {
     path: '/',
     element: <App />,
@@ -40,17 +45,17 @@ export const router = createBrowserRouter([
       { path: 'contact', element: <Contact /> },
       { path: 'login', element: <LoginRoute /> },
       {
-        path: 'client',
+        path: CLIENT_DASHBOARD_PATH,
         loader: ({ request }) => requireRole(request, 'client'),
         element: <ClientDashboard />,
       },
       {
-        path: 'chauffeur',
+        path: DRIVER_DASHBOARD_PATH,
         loader: ({ request }) => requireRole(request, 'driver'),
         element: <DriverDashboard />,
       },
       {
-        path: 'admin',
+        path: ADMIN_DASHBOARD_PATH,
         loader: ({ request }) => requireRole(request, 'admin'),
         element: <AdminDashboard />,
       },
@@ -61,4 +66,6 @@ export const router = createBrowserRouter([
       { path: '*', element: <NotFound /> },
     ],
   },
-]);
+];
+
+export const router = createBrowserRouter(routesConfig);

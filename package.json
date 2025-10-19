@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
-    "test": "rm -rf .test-dist && tsc --project tsconfig.test.json && for file in .test-dist/*.js; do mv \"$file\" \"${file%.js}.cjs\"; done && for file in .test-dist/*.cjs; do ln -s \"$(basename \"$file\")\" \"${file%.cjs}.js\"; done && node --test .test-dist/auth.test.cjs && rm -rf .test-dist"
+    "test": "rm -rf .test-dist && tsc --project tsconfig.test.json && find .test-dist -name '*.js' -exec sh -c 'for f do mv \"$f\" \"${f%.js}.cjs\"; done' _ {} + && find .test-dist -name '*.cjs' -exec sh -c 'for f do ln -s \"$(basename \"$f\")\" \"${f%.cjs}.js\"; done' _ {} + && node --test $(find .test-dist -name '*.test.cjs' -print) && rm -rf .test-dist"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

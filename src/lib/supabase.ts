@@ -20,17 +20,23 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+export type ProfileRole = 'admin' | 'driver' | 'client';
+
 export type Profile = {
   id: string;
   email: string;
   full_name: string;
   phone: string | null;
-  role: 'admin' | 'driver' | 'client';
+  role: ProfileRole;
   company_name: string | null;
   avatar_url: string | null;
   created_at: string;
   updated_at: string;
 };
+
+export type DatabaseMissionStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+
+export type MissionStatus = DatabaseMissionStatus | 'new' | 'done' | 'canceled';
 
 export type Mission = {
   id: string;
@@ -50,7 +56,7 @@ export type Mission = {
   actual_end_time: string | null;
   distance_km: number | null;
   price: number | null;
-  status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+  status: MissionStatus;
   priority: 'normal' | 'urgent' | 'express';
   notes: string | null;
   created_at: string;

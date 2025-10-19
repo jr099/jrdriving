@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Users, Truck, FileText, DollarSign, TrendingUp, Clock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import {
+  normalizeMissionStatus,
+  getMissionStatusBadgeClass,
+  getMissionStatusLabel,
+} from '../lib/missions';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -30,9 +35,12 @@ export default function AdminDashboard() {
       ]);
 
       const missions = missionsRes.data || [];
-      const activeMissions = missions.filter((m) => m.status === 'in_progress' || m.status === 'assigned');
+      const activeMissions = missions.filter((m) => {
+        const status = normalizeMissionStatus(m.status);
+        return status === 'in_progress' || status === 'assigned';
+      });
       const revenue = missions
-        .filter((m) => m.status === 'completed' && m.price)
+        .filter((m) => normalizeMissionStatus(m.status) === 'done' && m.price)
         .reduce((sum, m) => sum + (m.price || 0), 0);
 
       setStats({
@@ -50,23 +58,6 @@ export default function AdminDashboard() {
       console.error('Error loading dashboard:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'assigned':
-        return 'bg-blue-100 text-blue-800';
-      case 'in_progress':
-        return 'bg-orange-100 text-orange-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -163,23 +154,28 @@ export default function AdminDashboard() {
                   Aucune mission
                 </div>
               ) : (
-                recentMissions.map((mission) => (
-                  <div key={mission.id} className="p-4 hover:bg-gray-50">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-mono text-sm font-semibold">{mission.mission_number}</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(mission.status)}`}>
-                        {mission.status}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      <p>{mission.departure_city} → {mission.arrival_city}</p>
-                      <div className="flex items-center mt-1 text-xs">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {new Date(mission.scheduled_date).toLocaleDateString('fr-FR')}
+                recentMissions.map((mission) => {
+                  const status = normalizeMissionStatus(mission.status);
+                  return (
+                    <div key={mission.id} className="p-4 hover:bg-gray-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-mono text-sm font-semibold">{mission.mission_number}</span>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${getMissionStatusBadgeClass(status)}`}
+                        >
+                          {getMissionStatusLabel(status)}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <p>{mission.departure_city} → {mission.arrival_city}</p>
+                        <div className="flex items-center mt-1 text-xs">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {new Date(mission.scheduled_date).toLocaleDateString('fr-FR')}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>

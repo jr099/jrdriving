@@ -1,4 +1,4 @@
-import type { Profile } from './supabase';
+import type { ProfileRole } from './supabase';
 
 export type AppPage =
   | 'home'
@@ -72,7 +72,7 @@ export function getPageFromPath(pathname: string): AppPage {
   return 'home';
 }
 
-export function getRoleDefaultPage(role: Profile['role']): AppPage {
+export function getRoleDefaultPage(role: ProfileRole): AppPage {
   switch (role) {
     case 'admin':
       return 'admin';
@@ -84,7 +84,7 @@ export function getRoleDefaultPage(role: Profile['role']): AppPage {
   }
 }
 
-export function getRoleRedirectPath(role: Profile['role']): string {
+export function getRoleRedirectPath(role: ProfileRole): string {
   return PAGE_TO_PATH[getRoleDefaultPage(role)];
 }
 

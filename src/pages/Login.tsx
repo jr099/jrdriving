@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { LogIn, UserPlus, Truck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase, type Profile } from '../lib/supabase';
+import { supabase, type ProfileRole } from '../lib/supabase';
 import { getRoleDefaultPage } from '../lib/navigation';
 
 type LoginProps = {
@@ -15,7 +15,7 @@ export default function Login({ onNavigate }: LoginProps) {
     password: '',
     fullName: '',
     phone: '',
-    role: 'client' as Profile['role'],
+    role: 'client' as ProfileRole,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -27,7 +27,22 @@ export default function Login({ onNavigate }: LoginProps) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const role = (user?.user_metadata?.role as Profile['role'] | undefined) ?? 'client';
+    if (!user) {
+      onNavigate(getRoleDefaultPage('client'));
+      return;
+    }
+
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const role =
+      (profileData?.role as ProfileRole | undefined) ??
+      (user.user_metadata?.role as ProfileRole | undefined) ??
+      'client';
+
     onNavigate(getRoleDefaultPage(role));
   };
 
