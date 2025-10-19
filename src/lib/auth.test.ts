@@ -31,6 +31,7 @@ test('requireAuth redirects to login when no session is available', async () => 
   }
 
   assert.ok(response, 'Expected a redirect response');
-  assert.equal(response.status, 302);
-  assert.equal(response.headers.get('Location'), '/login?redirectTo=%2Fclient%3Ffoo%3Dbar');
+  const redirect = response as Response;
+  assert.equal(redirect.status, 302);
+  assert.equal(redirect.headers.get('Location'), '/login?redirectTo=%2Fclient%3Ffoo%3Dbar');
 });

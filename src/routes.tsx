@@ -3,7 +3,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import App from './App';
 import Home from './pages/Home';
 import Services from './pages/Services';
-import Quote from './pages/Quote';
+import QuoteForm from './pages/QuoteForm';
 import Contact from './pages/Contact';
 import Login from './pages/Login';
 import DriverDashboard from './pages/DriverDashboard';
@@ -33,7 +33,7 @@ function withNavigation<P extends { onNavigate: (page: string) => void }>(Compon
 
 const HomeRoute = withNavigation(Home);
 const ServicesRoute = withNavigation(Services);
-const QuoteRoute = withNavigation(Quote);
+const QuoteRoute = withNavigation(QuoteForm);
 const LoginRoute = withNavigation(Login);
 
 export const routesConfig = [

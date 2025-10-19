@@ -18,6 +18,13 @@
     "src/lib/missions.ts",
     "src/lib/auth.test.ts",
     "src/routes.constants.ts",
-    "src/routes.test.ts"
+    "src/routes.test.ts",
+    "src/lib/queryClient.ts",
+    "src/api/audit.ts",
+    "src/api/quotes.ts",
+    "src/pages/quoteForm.schema.ts",
+    "src/pages/quoteForm.schema.test.ts",
+    "src/vendor/**/*",
+    "src/types/stubs.d.ts"
   ]
 }

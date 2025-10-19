@@ -76,6 +76,30 @@ export type Quote = {
   message: string | null;
   status: 'new' | 'quoted' | 'converted' | 'declined';
   estimated_price: number | null;
+  profile_id: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type AuditLog = {
+  id: string;
+  action: string;
+  actor: string | null;
+  entity: string;
+  meta: Record<string, unknown>;
+  ts: string;
+};
+
+export type QuoteInsert = {
+  full_name: string;
+  email: string;
+  phone: string;
+  company_name?: string | null;
+  vehicle_type: string;
+  departure_location: string;
+  arrival_location: string;
+  preferred_date?: string | null;
+  message?: string | null;
+  status?: Quote['status'];
+  profile_id?: string | null;
 };
