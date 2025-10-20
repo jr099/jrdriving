@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { LogIn, UserPlus, Truck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase, type Profile } from '../lib/supabase';
+import type { Profile } from '../lib/api-types';
 import { getRoleDefaultPage } from '../lib/navigation';
+import { extractErrorMessage } from '../lib/api-client';
 
 type LoginProps = {
   onNavigate: (page: string) => void;
@@ -22,30 +23,20 @@ export default function Login({ onNavigate }: LoginProps) {
 
   const { signIn, signUp } = useAuth();
 
-  const redirectToRole = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    const role = (user?.user_metadata?.role as Profile['role'] | undefined) ?? 'client';
-    onNavigate(getRoleDefaultPage(role));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      if (isLogin) {
-        await signIn(formData.email, formData.password);
-        await redirectToRole();
-      } else {
-        await signUp(formData.email, formData.password, formData.fullName, formData.phone, formData.role);
-        onNavigate(getRoleDefaultPage(formData.role));
-      }
-    } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue');
+      const session = isLogin
+        ? await signIn(formData.email, formData.password)
+        : await signUp(formData.email, formData.password, formData.fullName, formData.phone, formData.role);
+
+      const role = session.profile.role ?? formData.role;
+      onNavigate(getRoleDefaultPage(role));
+    } catch (err) {
+      setError(extractErrorMessage(err));
     } finally {
       setLoading(false);
     }

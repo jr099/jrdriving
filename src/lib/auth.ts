@@ -1,53 +1,47 @@
-import type { User } from '@supabase/supabase-js';
-import { supabase, type Profile } from './supabase';
+import type { AuthSession, Profile } from './api-types';
+export type { AuthSession } from './api-types';
 import { getRoleRedirectPath } from './navigation';
 import { createRedirect } from './redirect';
 
-export type AuthSession = {
-  user: User;
-  profile: Profile;
-};
-
-async function fetchProfile(userId: string): Promise<Profile> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
+function resolveSessionUrl(request: Request): string {
+  if (typeof window !== 'undefined') {
+    return '/api/auth/session';
   }
 
-  if (!data) {
-    throw createRedirect('/login?error=missing_profile');
+  const requestUrl = new URL(request.url);
+  return new URL('/api/auth/session', `${requestUrl.protocol}//${requestUrl.host}`).toString();
+}
+
+async function requestSession(request: Request): Promise<Response> {
+  const sessionUrl = resolveSessionUrl(request);
+  const init: RequestInit = { method: 'GET' };
+
+  if (typeof window !== 'undefined') {
+    init.credentials = 'include';
+  } else {
+    const cookie = request.headers.get('cookie');
+    if (cookie) {
+      init.headers = { cookie };
+    }
   }
 
-  return data;
+  return fetch(sessionUrl, init);
 }
 
 export async function requireAuth(request: Request): Promise<AuthSession> {
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
+  const response = await requestSession(request);
 
-  if (error) {
-    throw error;
-  }
-
-  if (!session || !session.user) {
+  if (response.status === 401) {
     const url = new URL(request.url);
     const redirectTo = `${url.pathname}${url.search}`;
     throw createRedirect(`/login?redirectTo=${encodeURIComponent(redirectTo)}`);
   }
 
-  const profile = await fetchProfile(session.user.id);
+  if (!response.ok) {
+    throw new Error('Unable to verify authentication.');
+  }
 
-  return {
-    user: session.user,
-    profile,
-  };
+  return (await response.json()) as AuthSession;
 }
 
 export async function requireRole(

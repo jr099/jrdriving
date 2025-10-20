@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Truck, Calendar, MapPin, Upload, CheckCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { submitQuote } from '../lib/api';
+import { extractErrorMessage } from '../lib/api-client';
 
 type QuoteProps = {
   onNavigate: (page: string) => void;
@@ -29,25 +30,22 @@ export default function Quote({ onNavigate }: QuoteProps) {
     setError('');
 
     try {
-      const { error: insertError } = await supabase.from('quotes').insert({
-        full_name: formData.fullName,
+      await submitQuote({
+        fullName: formData.fullName,
         email: formData.email,
         phone: formData.phone,
-        company_name: formData.companyName || null,
-        vehicle_type: formData.vehicleType,
-        departure_location: formData.departureLocation,
-        arrival_location: formData.arrivalLocation,
-        preferred_date: formData.preferredDate || null,
-        message: formData.message || null,
-        status: 'new',
+        companyName: formData.companyName || undefined,
+        vehicleType: formData.vehicleType,
+        departureLocation: formData.departureLocation,
+        arrivalLocation: formData.arrivalLocation,
+        preferredDate: formData.preferredDate || undefined,
+        message: formData.message || undefined,
       });
-
-      if (insertError) throw insertError;
 
       setSubmitted(true);
     } catch (err) {
       console.error('Error submitting quote:', err);
-      setError('Une erreur est survenue. Veuillez réessayer.');
+      setError(extractErrorMessage(err));
     } finally {
       setLoading(false);
     }
