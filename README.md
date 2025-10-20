@@ -1,11 +1,11 @@
 # JRDriving
 
-JRDriving est une application SaaS de gestion de convoyage automobile destinée aux équipes dispatch, chauffeurs et clients. Elle s'appuie sur React (Vite) côté front, Supabase pour l'authentification, et une API REST adossée à MySQL (Hostinger) pour la donnée métier.
+JRDriving est une application SaaS de gestion de convoyage automobile destinée aux équipes dispatch, chauffeurs et clients. Elle s'appuie sur React (Vite) côté front et sur une API REST adossée à MySQL (Hostinger) pour l'authentification et les données métier.
 
 ## Sommaire
 - [Prérequis](#prérequis)
 - [Installation & démarrage](#installation--démarrage)
-- [Configuration Supabase & n8n](#configuration-supabase--n8n)
+- [Configuration API & n8n](#configuration-api--n8n)
 - [Fonctionnement fonctionnel](#fonctionnement-fonctionnel)
   - [Demande de devis](#demande-de-devis)
   - [Authentification & inscription](#authentification--inscription)
@@ -15,8 +15,7 @@ JRDriving est une application SaaS de gestion de convoyage automobile destinée 
 
 ## Prérequis
 - Node.js 18+ et npm 9+.
-- Accès à un projet Supabase configuré (URL + clé `anon`).
-- Une base MySQL (Hostinger) exposée via une API REST sécurisée.
+- Une API REST sécurisée exposant la base MySQL (Hostinger) avec les routes JRDriving (`/auth/*`, `/profiles/*`, `/quotes`, `/missions`, ...).
 - Un webhook n8n pour la notification des devis.
 
 ## Installation & démarrage
@@ -32,19 +31,17 @@ npm run build
 npm run preview
 ```
 
-## Configuration Supabase & n8n
+## Configuration API & n8n
 1. Copiez le fichier d'exemple et renseignez les variables :
    ```bash
    cp .env.local.example .env.local
    ```
 2. Ouvrez `.env.local` et complétez :
-   - `VITE_SUPABASE_URL` : URL de votre instance Supabase.
-   - `VITE_SUPABASE_ANON_KEY` : clé `anon` (jamais de `service_role` côté front).
    - `VITE_API_BASE_URL` : URL de l'API REST qui dialogue avec MySQL (exposée depuis Hostinger / Nest).
    - `VITE_N8N_WEBHOOK_QUOTE_CREATED` : URL du webhook n8n pour notifier la création de devis.
 3. Redémarrez le serveur de développement après modification.
 
-> Les politiques RLS doivent être activées sur `profiles` côté Supabase pour sécuriser les sessions. La granularité d'accès aux données métier est assurée par votre API REST/MySQL (rôles et vérification du jeton Supabase côté serveur).
+> L'API doit vérifier les rôles et permissions sur chaque route (JWT, sessions) afin de sécuriser l'accès aux données métier.
 
 ## Fonctionnement fonctionnel
 
@@ -59,12 +56,12 @@ npm run preview
 - En cas de succès, un écran de confirmation propose de revenir à l'accueil ou de soumettre un nouveau devis.
 
 ### Authentification & inscription
-- L'accès protégé repose sur Supabase Auth et l'`AuthProvider` du projet.
+- L'accès protégé repose sur l'API MySQL : les endpoints `/auth/login`, `/auth/register`, `/auth/session` et `/auth/logout` fournissent les jetons JWT et le profil associé.
 - Depuis `/login`, les utilisateurs peuvent :
   - Se connecter via email/mot de passe.
   - Créer un compte (profil synchronisé dans MySQL via l'API pour éviter les doublons).
 - Après authentification, l'application redirige vers le sélecteur de tableaux de bord (`/dashboards`).
-- Les sessions sont persistées : un rafraîchissement maintient l'utilisateur connecté si la session Supabase est valide et que l'API confirme le profil associé.
+- Les sessions sont persistées dans `localStorage` : un rafraîchissement maintient l'utilisateur connecté tant que le jeton reste valide et que l'API confirme le profil associé.
 
 ### Accès aux tableaux de bord
 - La page `/dashboards` propose des cartes d'accès pour les rôles **Client**, **Chauffeur** et **Admin**.
@@ -72,13 +69,13 @@ npm run preview
   - `/client` pour la vue client (suivi des devis/missions).
   - `/chauffeur` pour la vue chauffeur (missions assignées, statut, preuves).
   - `/admin` pour la vue administrateur (statistiques, missions, devis à traiter).
-- Les loaders React Router `requireAuth` et `requireRole` vérifient la session Supabase puis interrogent l'API MySQL pour récupérer le profil et confirmer le rôle avant d'autoriser l'accès.
+- Les loaders React Router `requireAuth` et `requireRole` lisent la session locale, valident le profil via l'API MySQL puis confirment le rôle avant d'autoriser l'accès.
 - En cas d'absence de droits, l'utilisateur est renvoyé vers le sélecteur ou la page de connexion.
 
 ## Bonnes pratiques d'usage
 - **Sécurité** :
-  - Ne jamais exposer la clé `service_role` côté front.
-  - Côté API, validez systématiquement le jeton Supabase reçu (claims JWT) avant d'interroger MySQL.
+  - Ne stockez jamais de mots de passe en clair ; l'API doit gérer le hash et la vérification des identifiants.
+  - Vérifiez systématiquement le JWT reçu avant d'interroger MySQL.
 - **A11y** : conserver les labels et attributs `aria-*` sur les formulaires et composants interactifs.
 - **Performances** :
   - Réutilisez les hooks TanStack Query avec des clés stables.
@@ -91,4 +88,3 @@ npm run preview
 - `npm run build` : build de production.
 - `npm run preview` : sert le build localement.
 - `npm test` : exécute la suite de tests.
-

@@ -31,8 +31,8 @@ export default function Legal() {
             <div>
               <h2 className="text-2xl font-bold text-slate-900 mb-4">Hébergement</h2>
               <p className="text-gray-700 leading-relaxed">
-                <strong>Hébergeur:</strong> Supabase Inc.<br />
-                <strong>Adresse:</strong> 970 Toa Payoh North, #07-04, Singapore 318992
+                <strong>Hébergeur:</strong> Hostinger International Ltd.<br />
+                <strong>Adresse:</strong> 61 Lordou Vironos Street, 6023 Larnaca, Chypre
               </p>
             </div>
 

@@ -1,58 +1,95 @@
-import type { User } from '@supabase/supabase-js';
-import { supabase } from './supabase';
+import { fetchProfileById } from '../api/profiles';
 import type { Profile, ProfileRole } from '../types/domain';
 import { getRoleRedirectPath } from './navigation';
 import { createRedirect } from './redirect';
-import { fetchProfileById } from '../api/profiles';
 import { ApiError } from './apiClient';
+import type { AuthUser } from '../api/auth';
 
-export type AuthSession = {
-  user: User;
-  profile: Profile;
+const STORAGE_KEY = 'jrdriving.auth';
+
+type StoredAuth = {
   token: string;
+  user: AuthUser;
+  profile: Profile;
 };
 
-async function resolveSession(): Promise<{ session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']; error: any; }> {
-  const { data, error } = await supabase.auth.getSession();
-  return { session: data.session, error };
-}
-
-async function fetchProfile(userId: string, token: string): Promise<Profile> {
+function getStorage(): Storage | null {
   try {
-    return await fetchProfileById(userId, token);
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
-      throw createRedirect('/login?error=missing_profile');
+    if (typeof window === 'undefined') {
+      return null;
     }
-    throw error;
+    return window.localStorage;
+  } catch {
+    return null;
   }
 }
+
+export function readStoredAuth(): StoredAuth | null {
+  const storage = getStorage();
+  if (!storage) return null;
+
+  const raw = storage.getItem(STORAGE_KEY);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as StoredAuth;
+  } catch (error) {
+    console.warn('Failed to parse stored auth payload', error);
+    storage.removeItem(STORAGE_KEY);
+    return null;
+  }
+}
+
+export function writeStoredAuth(value: StoredAuth | null): void {
+  const storage = getStorage();
+  if (!storage) return;
+
+  if (!value) {
+    storage.removeItem(STORAGE_KEY);
+    return;
+  }
+
+  storage.setItem(STORAGE_KEY, JSON.stringify(value));
+}
+
+export type AuthSession = StoredAuth;
 
 export async function requireAuth(request: Request): Promise<AuthSession> {
-  const { session, error } = await resolveSession();
+  const stored = readStoredAuth();
 
-  if (error) {
-    throw error;
-  }
-
-  if (!session || !session.user) {
+  if (!stored) {
     const url = new URL(request.url);
     const redirectTo = `${url.pathname}${url.search}`;
     throw createRedirect(`/login?redirectTo=${encodeURIComponent(redirectTo)}`);
   }
 
-  const token = session.access_token;
-  if (!token) {
-    throw new Error('Missing access token for authenticated request');
+  let profile: Profile;
+  try {
+    profile = await fetchProfileById(stored.user.id, stored.token);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      if (error.status === 401 || error.status === 403) {
+        writeStoredAuth(null);
+        const url = new URL(request.url);
+        const redirectTo = `${url.pathname}${url.search}`;
+        throw createRedirect(`/login?redirectTo=${encodeURIComponent(redirectTo)}`);
+      }
+
+      if (error.status === 404) {
+        writeStoredAuth(null);
+        throw createRedirect('/login?error=missing_profile');
+      }
+    }
+    throw error;
   }
-
-  const profile = await fetchProfile(session.user.id, token);
-
-  return {
-    user: session.user,
+  const session: AuthSession = {
+    token: stored.token,
+    user: stored.user,
     profile,
-    token,
   };
+
+  writeStoredAuth(session);
+  return session;
 }
 
 export async function requireRole(

@@ -4,8 +4,6 @@ import test from 'node:test';
 const processEnv = (((globalThis as any).process ?? ((globalThis as any).process = {})).env ??=
   {} as Record<string, string>);
 
-processEnv.VITE_SUPABASE_URL = 'https://test.supabase.local';
-processEnv.VITE_SUPABASE_ANON_KEY = 'test-anon-key';
 processEnv.VITE_API_BASE_URL = 'https://api.test.local';
 
 import { PROTECTED_DASHBOARD_PATHS } from './routes.constants.js';

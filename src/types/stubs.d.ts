@@ -34,11 +34,6 @@ declare module 'lucide-react' {
   export const Loader2: any;
 }
 
-declare module '@supabase/supabase-js' {
-  export type User = any;
-  export function createClient(url: string, key: string): any;
-}
-
 declare module 'node:test' {
   export type TestFn = (...args: any[]) => unknown;
   export default function test(name: string, fn: TestFn): Promise<void>;

@@ -1,11 +1,20 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { Profile, ProfileRole } from '../types/domain';
-import { fetchCurrentProfile, upsertProfile } from '../api/profiles';
+import type { AuthUser } from '../api/auth';
+import { fetchCurrentProfile } from '../api/profiles';
+import { login, register, fetchSession, logout } from '../api/auth';
+import { readStoredAuth, writeStoredAuth } from '../lib/auth';
 
-type AuthContextType = {
-  user: User | null;
+export type AuthContextType = {
+  user: AuthUser | null;
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
@@ -14,7 +23,8 @@ type AuthContextType = {
     password: string,
     fullName: string,
     phone: string,
-    role: ProfileRole
+    role: ProfileRole,
+    companyName?: string | null
   ) => Promise<void>;
   signOut: () => Promise<void>;
   getAccessToken: () => Promise<string | null>;
@@ -22,132 +32,153 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+type AuthPayload = {
+  token: string;
+  user: AuthUser;
+  profile: Profile;
+};
+
+type AuthState = AuthPayload;
+
+function toAuthState(payload: AuthPayload): AuthState {
+  return {
+    token: payload.token,
+    user: payload.user,
+    profile: payload.profile,
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const getAccessToken = useCallback(async () => {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
-      throw error;
+  const applyAuthState = useCallback((state: AuthState, persist: boolean) => {
+    setToken(state.token);
+    setUser(state.user);
+    setProfile(state.profile);
+    if (persist) {
+      writeStoredAuth(state);
     }
-    return data.session?.access_token ?? null;
   }, []);
 
-  const loadProfile = useCallback(
-    async (tokenOverride?: string | null) => {
-      try {
-        setLoading(true);
-        const token = tokenOverride ?? (await getAccessToken());
-        if (!token) {
-          setProfile(null);
-          return;
-        }
-        const data = await fetchCurrentProfile(token);
-        setProfile(data);
-      } catch (error) {
-        console.error('Error loading profile:', error);
-        setProfile(null);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [getAccessToken]
-  );
+  const clearAuthState = useCallback(() => {
+    setToken(null);
+    setUser(null);
+    setProfile(null);
+    writeStoredAuth(null);
+  }, []);
 
   useEffect(() => {
-    let isMounted = true;
+    let active = true;
+    const stored = readStoredAuth();
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!isMounted) return;
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        void loadProfile(session.access_token ?? null);
-      } else {
-        setProfile(null);
-        setLoading(false);
-      }
-    });
+    if (stored && active) {
+      applyAuthState(toAuthState(stored), false);
+    } else if (!stored) {
+      setLoading(false);
+    }
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!isMounted) {
-        return;
+    if (!stored) {
+      return () => {
+        active = false;
+      };
+    }
+
+    (async () => {
+      try {
+        const refreshed = await fetchSession(stored.token);
+        if (!active) return;
+        applyAuthState(toAuthState(refreshed), true);
+      } catch (error) {
+        console.warn('Failed to refresh session', error);
+        if (!active) return;
+        clearAuthState();
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        void loadProfile(session.access_token ?? null);
-      } else {
-        setProfile(null);
-        setLoading(false);
-      }
-    });
+    })();
 
     return () => {
-      isMounted = false;
-      subscription.unsubscribe();
+      active = false;
     };
-  }, [loadProfile]);
+  }, [applyAuthState, clearAuthState]);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-  };
+  const getAccessToken = useCallback(async () => token, [token]);
 
-  const signUp = async (
-    email: string,
-    password: string,
-    fullName: string,
-    phone: string,
-    role: ProfileRole
-  ) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          phone,
-          role,
-        },
-      },
-    });
+  const refreshProfile = useCallback(
+    async (tokenValue: string, userOverride?: AuthUser | null) => {
+      const baseUser = userOverride ?? user;
+      if (!baseUser) {
+        return;
+      }
 
-    if (error) throw error;
-
-    const userId = data.user?.id;
-    const token = data.session?.access_token ?? (await getAccessToken());
-
-    if (userId && token) {
-      await upsertProfile(
-        {
-          id: userId,
-          email,
-          fullName,
-          phone,
-          role,
-        },
-        token
-      );
-      await loadProfile(token);
-    }
-  };
-
-  const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-  };
-
-  return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, getAccessToken }}>
-      {children}
-    </AuthContext.Provider>
+      try {
+        const freshProfile = await fetchCurrentProfile(tokenValue);
+        const state: AuthState = { token: tokenValue, user: baseUser, profile: freshProfile };
+        applyAuthState(state, true);
+      } catch (error) {
+        console.error('Error refreshing profile', error);
+      }
+    },
+    [applyAuthState, user]
   );
+
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      const auth = await login(email, password);
+      applyAuthState(toAuthState(auth), true);
+    },
+    [applyAuthState]
+  );
+
+  const signUp = useCallback(
+    async (
+      email: string,
+      password: string,
+      fullName: string,
+      phone: string,
+      role: ProfileRole,
+      companyName?: string | null
+    ) => {
+      const auth = await register({ email, password, fullName, phone, role, companyName });
+      applyAuthState(toAuthState(auth), true);
+      await refreshProfile(auth.token, auth.user);
+    },
+    [applyAuthState, refreshProfile]
+  );
+
+  const signOut = useCallback(async () => {
+    if (token) {
+      try {
+        await logout(token);
+      } catch (error) {
+        console.warn('Failed to call logout endpoint', error);
+      }
+    }
+    clearAuthState();
+  }, [clearAuthState, token]);
+
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user,
+      profile,
+      loading,
+      signIn,
+      signUp,
+      signOut,
+      getAccessToken,
+    }),
+    [getAccessToken, loading, profile, signIn, signOut, signUp, user]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
