@@ -1,118 +1,85 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { Truck, Clock, MapPin, DollarSign, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
-import { supabase, Mission } from '../lib/supabase';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
+import {
+  normalizeMissionStatus,
+  getMissionStatusLabel,
+  getMissionStatusBadgeClass,
+  type NormalizedMissionStatus,
+} from '../lib/missions';
+import { fetchDriverDashboard, updateMissionStatus } from '../api/dashboard';
 
 export default function DriverDashboard() {
-  const { profile } = useAuth();
-  const [missions, setMissions] = useState<Mission[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalMissions: 0,
-    inProgress: 0,
-    completed: 0,
-    totalKm: 0,
+  const { profile, getAccessToken } = useAuth();
+  const queryClient = useQueryClient();
+
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    error,
+  } = useQuery({
+    queryKey: ['driver-dashboard'],
+    enabled: Boolean(profile),
+    queryFn: async () => {
+      const token = await getAccessToken();
+      if (!token) {
+        throw new Error('Impossible de récupérer le jeton d\'authentification');
+      }
+      return fetchDriverDashboard(token);
+    },
   });
 
-  useEffect(() => {
-    loadMissions();
-  }, [profile]);
-
-  const loadMissions = async () => {
-    if (!profile) return;
-
-    try {
-      const { data: driverData } = await supabase
-        .from('drivers')
-        .select('id, total_missions, total_kilometers')
-        .eq('user_id', profile.id)
-        .maybeSingle();
-
-      if (!driverData) {
-        setLoading(false);
-        return;
+  const mutation = useMutation({
+    mutationFn: async ({ missionId, newStatus }: { missionId: string; newStatus: NormalizedMissionStatus }) => {
+      const token = await getAccessToken();
+      if (!token) {
+        throw new Error('Impossible de récupérer le jeton d\'authentification');
       }
+      await updateMissionStatus(
+        missionId,
+        {
+          status: newStatus,
+          occurredAt: new Date().toISOString(),
+        },
+        token
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['driver-dashboard'] });
+    },
+  });
 
-      const { data: missionsData, error } = await supabase
-        .from('missions')
-        .select('*')
-        .eq('driver_id', driverData.id)
-        .order('scheduled_date', { ascending: false });
+  const missions = data?.missions ?? [];
+  const driverStats = data?.driver;
 
-      if (error) throw error;
+  const stats = useMemo(
+    () => ({
+      totalMissions: driverStats?.total_missions ?? missions.length,
+      inProgress: missions.filter((m) => normalizeMissionStatus(m.status) === 'in_progress').length,
+      completed: missions.filter((m) => normalizeMissionStatus(m.status) === 'done').length,
+      totalKm: driverStats?.total_kilometers ?? 0,
+    }),
+    [driverStats, missions]
+  );
 
-      setMissions(missionsData || []);
-      setStats({
-        totalMissions: driverData.total_missions || 0,
-        inProgress: (missionsData || []).filter((m: Mission) => m.status === 'in_progress').length,
-        completed: (missionsData || []).filter((m: Mission) => m.status === 'completed').length,
-        totalKm: driverData.total_kilometers || 0,
-      });
-    } catch (error) {
-      console.error('Error loading missions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="max-w-md text-center bg-white rounded-xl shadow-lg p-8 space-y-3">
+          <AlertCircle className="h-12 w-12 text-orange-600 mx-auto" />
+          <h2 className="text-xl font-semibold text-slate-900">Profil chauffeur introuvable</h2>
+          <p className="text-sm text-gray-600">
+            Veuillez actualiser la page ou contacter l'administrateur pour rattacher votre compte chauffeur.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-  const updateMissionStatus = async (missionId: string, newStatus: Mission['status']) => {
-    try {
-      const updates: any = { status: newStatus };
-
-      if (newStatus === 'in_progress') {
-        updates.actual_start_time = new Date().toISOString();
-      } else if (newStatus === 'completed') {
-        updates.actual_end_time = new Date().toISOString();
-      }
-
-      const { error } = await supabase
-        .from('missions')
-        .update(updates)
-        .eq('id', missionId);
-
-      if (error) throw error;
-
-      loadMissions();
-    } catch (error) {
-      console.error('Error updating mission:', error);
-    }
-  };
-
-  const getStatusColor = (status: Mission['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'assigned':
-        return 'bg-blue-100 text-blue-800';
-      case 'in_progress':
-        return 'bg-orange-100 text-orange-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusText = (status: Mission['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'En attente';
-      case 'assigned':
-        return 'Assignée';
-      case 'in_progress':
-        return 'En cours';
-      case 'completed':
-        return 'Terminée';
-      case 'cancelled':
-        return 'Annulée';
-      default:
-        return status;
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -123,14 +90,33 @@ export default function DriverDashboard() {
     );
   }
 
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="max-w-md text-center bg-white rounded-xl shadow-lg p-8 space-y-3">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+          <h2 className="text-xl font-semibold text-slate-900">Impossible de charger vos missions</h2>
+          <p className="text-sm text-gray-600">
+            {(error as Error)?.message ?? 'Une erreur inattendue s\'est produite.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-lg"
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            Tableau de bord chauffeur
-          </h1>
-          <p className="text-gray-600">Bienvenue, {profile?.full_name}</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Tableau de bord chauffeur</h1>
+          <p className="text-gray-600">Bienvenue, {profile.full_name}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -187,98 +173,104 @@ export default function DriverDashboard() {
             </div>
           ) : (
             <div className="divide-y">
-              {missions.map((mission) => (
-                <div key={mission.id} className="p-6 hover:bg-gray-50 transition-colors">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex-1 mb-4 lg:mb-0">
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="font-mono font-semibold text-slate-900">
-                          {mission.mission_number}
-                        </span>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(mission.status)}`}>
-                          {getStatusText(mission.status)}
-                        </span>
-                        {mission.priority === 'express' && (
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-                            EXPRESS
+              {missions.map((mission) => {
+                const status = normalizeMissionStatus(mission.status);
+                const isUpdating = mutation.isPending;
+                return (
+                  <div key={mission.id} className="p-6 hover:bg-gray-50 transition-colors">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                      <div className="flex-1 mb-4 lg:mb-0">
+                        <div className="flex items-center gap-3 mb-3">
+                          <span className="font-mono font-semibold text-slate-900">{mission.mission_number}</span>
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold ${getMissionStatusBadgeClass(status)}`}
+                          >
+                            {getMissionStatusLabel(status)}
                           </span>
+                          {mission.priority === 'express' && (
+                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                              EXPRESS
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <div className="flex items-start mb-2">
+                              <MapPin className="h-4 w-4 text-green-600 mr-2 mt-0.5" />
+                              <div>
+                                <p className="font-semibold text-gray-900">Départ</p>
+                                <p className="text-gray-600">
+                                  {mission.departure_address}, {mission.departure_city}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex items-start mb-2">
+                              <MapPin className="h-4 w-4 text-red-600 mr-2 mt-0.5" />
+                              <div>
+                                <p className="font-semibold text-gray-900">Arrivée</p>
+                                <p className="text-gray-600">
+                                  {mission.arrival_address}, {mission.arrival_city}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center text-gray-600">
+                            <Calendar className="h-4 w-4 mr-2" />
+                            {new Date(mission.scheduled_date).toLocaleDateString('fr-FR')}
+                            {mission.scheduled_time && ` à ${mission.scheduled_time}`}
+                          </div>
+
+                          {mission.distance_km && (
+                            <div className="flex items-center text-gray-600">
+                              <MapPin className="h-4 w-4 mr-2" />
+                              {mission.distance_km} km
+                            </div>
+                          )}
+
+                          {mission.price && (
+                            <div className="flex items-center text-gray-600">
+                              <DollarSign className="h-4 w-4 mr-2" />
+                              {mission.price.toFixed(2)} €
+                            </div>
+                          )}
+                        </div>
+
+                        {mission.notes && (
+                          <div className="mt-3 p-3 bg-blue-50 rounded-lg text-sm text-gray-700">
+                            <strong>Notes:</strong> {mission.notes}
+                          </div>
                         )}
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <div className="flex items-start mb-2">
-                            <MapPin className="h-4 w-4 text-green-600 mr-2 mt-0.5" />
-                            <div>
-                              <p className="font-semibold text-gray-900">Départ</p>
-                              <p className="text-gray-600">
-                                {mission.departure_address}, {mission.departure_city}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="flex items-start mb-2">
-                            <MapPin className="h-4 w-4 text-red-600 mr-2 mt-0.5" />
-                            <div>
-                              <p className="font-semibold text-gray-900">Arrivée</p>
-                              <p className="text-gray-600">
-                                {mission.arrival_address}, {mission.arrival_city}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center text-gray-600">
-                          <Calendar className="h-4 w-4 mr-2" />
-                          {new Date(mission.scheduled_date).toLocaleDateString('fr-FR')}
-                          {mission.scheduled_time && ` à ${mission.scheduled_time}`}
-                        </div>
-
-                        {mission.distance_km && (
-                          <div className="flex items-center text-gray-600">
-                            <MapPin className="h-4 w-4 mr-2" />
-                            {mission.distance_km} km
-                          </div>
+                      <div className="flex lg:flex-col gap-2 lg:ml-6">
+                        {status === 'assigned' && (
+                          <button
+                            onClick={() => mutation.mutate({ missionId: mission.id, newStatus: 'in_progress' })}
+                            disabled={isUpdating}
+                            className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+                          >
+                            {isUpdating ? 'Mise à jour…' : 'Démarrer'}
+                          </button>
                         )}
-
-                        {mission.price && (
-                          <div className="flex items-center text-gray-600">
-                            <DollarSign className="h-4 w-4 mr-2" />
-                            {mission.price.toFixed(2)} €
-                          </div>
+                        {status === 'in_progress' && (
+                          <button
+                            onClick={() => mutation.mutate({ missionId: mission.id, newStatus: 'done' })}
+                            disabled={isUpdating}
+                            className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+                          >
+                            {isUpdating ? 'Mise à jour…' : 'Terminer'}
+                          </button>
                         )}
                       </div>
-
-                      {mission.notes && (
-                        <div className="mt-3 p-3 bg-blue-50 rounded-lg text-sm text-gray-700">
-                          <strong>Notes:</strong> {mission.notes}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex lg:flex-col gap-2 lg:ml-6">
-                      {mission.status === 'assigned' && (
-                        <button
-                          onClick={() => updateMissionStatus(mission.id, 'in_progress')}
-                          className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-lg transition-colors"
-                        >
-                          Démarrer
-                        </button>
-                      )}
-                      {mission.status === 'in_progress' && (
-                        <button
-                          onClick={() => updateMissionStatus(mission.id, 'completed')}
-                          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors"
-                        >
-                          Terminer
-                        </button>
-                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

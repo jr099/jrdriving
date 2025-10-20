@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LogIn, UserPlus, Truck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import type { ProfileRole } from '../types/domain';
 
 type LoginProps = {
   onNavigate: (page: string) => void;
@@ -13,12 +14,16 @@ export default function Login({ onNavigate }: LoginProps) {
     password: '',
     fullName: '',
     phone: '',
-    role: 'client' as 'client' | 'driver',
+    role: 'client' as ProfileRole,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const { signIn, signUp } = useAuth();
+
+  const redirectToDashboardSelector = () => {
+    onNavigate('dashboards');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,10 +33,10 @@ export default function Login({ onNavigate }: LoginProps) {
     try {
       if (isLogin) {
         await signIn(formData.email, formData.password);
-        onNavigate('home');
+        redirectToDashboardSelector();
       } else {
         await signUp(formData.email, formData.password, formData.fullName, formData.phone, formData.role);
-        onNavigate('home');
+        redirectToDashboardSelector();
       }
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue');
@@ -124,7 +129,7 @@ export default function Login({ onNavigate }: LoginProps) {
               onChange={handleChange}
               required
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-              placeholder="votre@email.com"
+              placeholder="jean.dupont@email.com"
             />
           </div>
 
@@ -138,58 +143,39 @@ export default function Login({ onNavigate }: LoginProps) {
               value={formData.password}
               onChange={handleChange}
               required
-              minLength={6}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-              placeholder="••••••••"
+              placeholder="********"
             />
           </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
-              {error}
-            </div>
-          )}
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full px-6 py-3 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors flex items-center justify-center"
+            className="w-full px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center"
           >
             {loading ? (
-              'Chargement...'
-            ) : isLogin ? (
-              <>
-                <LogIn className="h-5 w-5 mr-2" />
-                Se connecter
-              </>
+              <span className="animate-pulse">Chargement...</span>
             ) : (
               <>
-                <UserPlus className="h-5 w-5 mr-2" />
-                Créer mon compte
+                {isLogin ? <LogIn className="h-5 w-5 mr-2" /> : <UserPlus className="h-5 w-5 mr-2" />}
+                {isLogin ? 'Se connecter' : 'Créer mon compte'}
               </>
             )}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setError('');
-            }}
-            className="text-orange-600 hover:text-orange-700 font-semibold"
-          >
-            {isLogin ? "Pas encore de compte? S'inscrire" : 'Déjà un compte? Se connecter'}
-          </button>
-        </div>
-
-        <div className="mt-6 pt-6 border-t text-center">
-          <button
-            onClick={() => onNavigate('home')}
-            className="text-gray-600 hover:text-gray-800"
-          >
-            Retour à l'accueil
-          </button>
+        <div className="mt-6 text-center text-sm text-gray-600">
+          {isLogin ? (
+            <button onClick={() => setIsLogin(false)} className="text-orange-600 hover:underline">
+              Pas encore de compte ? Inscrivez-vous
+            </button>
+          ) : (
+            <button onClick={() => setIsLogin(true)} className="text-orange-600 hover:underline">
+              Déjà inscrit ? Connectez-vous
+            </button>
+          )}
         </div>
       </div>
     </div>

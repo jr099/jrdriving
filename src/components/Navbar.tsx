@@ -1,9 +1,10 @@
 import { Menu, X, Truck, User, LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import type { AppPage } from '../lib/navigation';
 
 type NavbarProps = {
-  currentPage: string;
+  currentPage: AppPage;
   onNavigate: (page: string) => void;
 };
 
@@ -21,24 +22,26 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
   };
 
   const navItems = user
-    ? profile?.role === 'admin'
-      ? [
-          { name: 'Accueil', page: 'home' },
-          { name: 'Services', page: 'services' },
-          { name: 'Administration', page: 'admin' },
-          { name: 'Contact', page: 'contact' },
-        ]
-      : profile?.role === 'driver'
-      ? [
-          { name: 'Accueil', page: 'home' },
-          { name: 'Mes Missions', page: 'driver' },
-          { name: 'Contact', page: 'contact' },
-        ]
-      : [
-          { name: 'Accueil', page: 'home' },
-          { name: 'Services', page: 'services' },
-          { name: 'Contact', page: 'contact' },
-        ]
+    ? [
+        { name: 'Accueil', page: 'home' },
+        { name: 'Tableaux de bord', page: 'dashboards' },
+        ...(profile?.role === 'admin'
+          ? [
+              { name: 'Services', page: 'services' },
+              { name: 'Administration', page: 'admin' },
+              { name: 'Contact', page: 'contact' },
+            ]
+          : profile?.role === 'driver'
+          ? [
+              { name: 'Mes Missions', page: 'driver' },
+              { name: 'Contact', page: 'contact' },
+            ]
+          : [
+              { name: 'Services', page: 'services' },
+              { name: 'Espace client', page: 'client' },
+              { name: 'Contact', page: 'contact' },
+            ]),
+      ]
     : [
         { name: 'Accueil', page: 'home' },
         { name: 'Services', page: 'services' },
@@ -49,10 +52,14 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
     <nav className="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center cursor-pointer" onClick={() => onNavigate('home')}>
+          <button
+            type="button"
+            className="flex items-center cursor-pointer"
+            onClick={() => onNavigate('home')}
+          >
             <Truck className="h-8 w-8 text-orange-500" />
             <span className="ml-2 text-xl font-bold">jrdriving</span>
-          </div>
+          </button>
 
           <div className="hidden md:flex items-center space-x-8">
             {navItems.map((item) => (
@@ -60,9 +67,7 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
                 key={item.page}
                 onClick={() => onNavigate(item.page)}
                 className={`transition-colors ${
-                  currentPage === item.page
-                    ? 'text-orange-500 font-semibold'
-                    : 'text-gray-300 hover:text-white'
+                  currentPage === item.page ? 'text-orange-500 font-semibold' : 'text-gray-300 hover:text-white'
                 }`}
               >
                 {item.name}
@@ -115,9 +120,7 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
                   setMobileMenuOpen(false);
                 }}
                 className={`block w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                  currentPage === item.page
-                    ? 'bg-orange-600 text-white'
-                    : 'text-gray-300 hover:bg-slate-700'
+                  currentPage === item.page ? 'bg-orange-600 text-white' : 'text-gray-300 hover:bg-slate-700'
                 }`}
               >
                 {item.name}
@@ -126,9 +129,7 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
 
             {user ? (
               <>
-                <div className="px-4 py-2 text-sm text-gray-400">
-                  {profile?.full_name}
-                </div>
+                <div className="px-4 py-2 text-sm text-gray-400">{profile?.full_name}</div>
                 <button
                   onClick={() => {
                     handleSignOut();

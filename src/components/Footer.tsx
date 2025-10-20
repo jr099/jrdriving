@@ -1,7 +1,9 @@
 import { Truck, Mail, Phone, MapPin } from 'lucide-react';
 
+import type { AppPage } from '../lib/navigation';
+
 type FooterProps = {
-  onNavigate: (page: string) => void;
+  onNavigate: (page: AppPage | string) => void;
 };
 
 export default function Footer({ onNavigate }: FooterProps) {
@@ -10,10 +12,14 @@ export default function Footer({ onNavigate }: FooterProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <div className="flex items-center mb-4">
+            <button
+              type="button"
+              onClick={() => onNavigate('home')}
+              className="flex items-center mb-4 text-left"
+            >
               <Truck className="h-8 w-8 text-orange-500" />
               <span className="ml-2 text-xl font-bold text-white">jrdriving</span>
-            </div>
+            </button>
             <p className="text-sm">
               Votre partenaire logistique pour le transport rapide et sécurisé de vos véhicules.
             </p>

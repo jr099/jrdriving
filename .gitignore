@@ -1,0 +1,11 @@
+node_modules/*
+!node_modules/@supabase/
+!node_modules/@supabase/supabase-js/
+!node_modules/@supabase/supabase-js/**
+!node_modules/zod/
+!node_modules/zod/**
+dist/
+.test-dist/
+.env
+.env.*
+!.env*.example

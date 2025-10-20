@@ -18,7 +18,14 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "react-hook-form": ["src/vendor/react-hook-form"],
+      "@hookform/resolvers/zod": ["src/vendor/hookform-resolvers-zod"],
+      "@tanstack/react-query": ["src/vendor/tanstack-react-query"],
+      "zod": ["src/vendor/zod"]
+    }
   },
   "include": ["src"]
 }

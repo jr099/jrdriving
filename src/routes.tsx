@@ -1,0 +1,78 @@
+import type { ComponentType } from 'react';
+import { createBrowserRouter } from 'react-router-dom';
+import App from './App';
+import Home from './pages/Home';
+import Services from './pages/Services';
+import QuoteForm from './pages/QuoteForm';
+import Contact from './pages/Contact';
+import Login from './pages/Login';
+import DriverDashboard from './pages/DriverDashboard';
+import AdminDashboard from './pages/AdminDashboard';
+import Legal from './pages/Legal';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import NotFound from './pages/NotFound';
+import ClientDashboard from './pages/ClientDashboard';
+import DashboardSelector from './pages/DashboardSelector';
+import { requireAuth, requireRole } from './lib/auth';
+import { usePageNavigation } from './hooks/usePageNavigation';
+import { createRedirect } from './lib/redirect';
+import {
+  CLIENT_DASHBOARD_PATH,
+  DRIVER_DASHBOARD_PATH,
+  ADMIN_DASHBOARD_PATH,
+  DASHBOARD_SELECTOR_PATH,
+} from './routes.constants';
+
+function withNavigation<P extends { onNavigate: (page: string) => void }>(Component: ComponentType<P>) {
+  return function ComponentWithNavigation(props: Omit<P, 'onNavigate'>) {
+    const handleNavigate = usePageNavigation();
+    return <Component {...(props as P)} onNavigate={handleNavigate} />;
+  };
+}
+
+const HomeRoute = withNavigation(Home);
+const ServicesRoute = withNavigation(Services);
+const QuoteRoute = withNavigation(QuoteForm);
+const LoginRoute = withNavigation(Login);
+
+export const routesConfig = [
+  {
+    path: '/',
+    element: <App />,
+    children: [
+      { index: true, element: <HomeRoute /> },
+      { path: 'services', element: <ServicesRoute /> },
+      { path: 'devis', element: <QuoteRoute /> },
+      { path: 'contact', element: <Contact /> },
+      { path: 'login', element: <LoginRoute /> },
+      {
+        path: DASHBOARD_SELECTOR_PATH,
+        loader: ({ request }) => requireAuth(request),
+        element: <DashboardSelector />,
+      },
+      {
+        path: CLIENT_DASHBOARD_PATH,
+        loader: ({ request }) => requireRole(request, 'client'),
+        element: <ClientDashboard />,
+      },
+      {
+        path: DRIVER_DASHBOARD_PATH,
+        loader: ({ request }) => requireRole(request, 'driver'),
+        element: <DriverDashboard />,
+      },
+      {
+        path: ADMIN_DASHBOARD_PATH,
+        loader: ({ request }) => requireRole(request, 'admin'),
+        element: <AdminDashboard />,
+      },
+      { path: 'mentions-legales', element: <Legal /> },
+      { path: 'mentions', loader: () => createRedirect('/mentions-legales') },
+      { path: 'conditions-generales', element: <Terms /> },
+      { path: 'politique-confidentialite', element: <Privacy /> },
+      { path: '*', element: <NotFound /> },
+    ],
+  },
+];
+
+export const router = createBrowserRouter(routesConfig);

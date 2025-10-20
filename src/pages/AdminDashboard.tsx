@@ -1,76 +1,35 @@
-import { useEffect, useState } from 'react';
 import { Users, Truck, FileText, DollarSign, TrendingUp, Clock } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  normalizeMissionStatus,
+  getMissionStatusBadgeClass,
+  getMissionStatusLabel,
+} from '../lib/missions';
+import { fetchAdminDashboard } from '../api/dashboard';
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({
-    totalMissions: 0,
-    activeMissions: 0,
-    totalDrivers: 0,
-    totalClients: 0,
-    pendingQuotes: 0,
-    revenue: 0,
+  const { profile, getAccessToken } = useAuth();
+
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    error,
+  } = useQuery({
+    queryKey: ['admin-dashboard'],
+    enabled: Boolean(profile),
+    queryFn: async () => {
+      const token = await getAccessToken();
+      if (!token) {
+        throw new Error('Impossible de récupérer le jeton d\'authentification');
+      }
+      return fetchAdminDashboard(token);
+    },
   });
-  const [recentMissions, setRecentMissions] = useState<any[]>([]);
-  const [pendingQuotes, setPendingQuotes] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
-    try {
-      const [missionsRes, driversRes, clientsRes, quotesRes, recentMissionsRes] = await Promise.all([
-        supabase.from('missions').select('id, status, price'),
-        supabase.from('drivers').select('id'),
-        supabase.from('clients').select('id'),
-        supabase.from('quotes').select('*').eq('status', 'new'),
-        supabase.from('missions').select('*').order('created_at', { ascending: false }).limit(5),
-      ]);
-
-      const missions = missionsRes.data || [];
-      const activeMissions = missions.filter((m) => m.status === 'in_progress' || m.status === 'assigned');
-      const revenue = missions
-        .filter((m) => m.status === 'completed' && m.price)
-        .reduce((sum, m) => sum + (m.price || 0), 0);
-
-      setStats({
-        totalMissions: missions.length,
-        activeMissions: activeMissions.length,
-        totalDrivers: driversRes.data?.length || 0,
-        totalClients: clientsRes.data?.length || 0,
-        pendingQuotes: quotesRes.data?.length || 0,
-        revenue,
-      });
-
-      setRecentMissions(recentMissionsRes.data || []);
-      setPendingQuotes(quotesRes.data || []);
-    } catch (error) {
-      console.error('Error loading dashboard:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'assigned':
-        return 'bg-blue-100 text-blue-800';
-      case 'in_progress':
-        return 'bg-orange-100 text-orange-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -80,6 +39,41 @@ export default function AdminDashboard() {
       </div>
     );
   }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="max-w-md text-center bg-white rounded-xl shadow-lg p-8 space-y-4">
+          <Truck className="h-12 w-12 text-red-500 mx-auto" />
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold text-slate-900">Impossible de charger les données</h2>
+            <p className="text-sm text-gray-600">
+              {(error as Error)?.message ?? 'Une erreur inattendue s\'est produite. Veuillez réessayer.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-lg"
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const stats = data?.stats ?? {
+    totalMissions: 0,
+    activeMissions: 0,
+    totalDrivers: 0,
+    totalClients: 0,
+    pendingQuotes: 0,
+    revenue: 0,
+  };
+
+  const recentMissions = data?.recentMissions ?? [];
+  const pendingQuotes = data?.pendingQuotes ?? [];
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -159,27 +153,32 @@ export default function AdminDashboard() {
             </div>
             <div className="divide-y max-h-[500px] overflow-y-auto">
               {recentMissions.length === 0 ? (
-                <div className="p-6 text-center text-gray-500">
-                  Aucune mission
-                </div>
+                <div className="p-6 text-center text-gray-500">Aucune mission</div>
               ) : (
-                recentMissions.map((mission) => (
-                  <div key={mission.id} className="p-4 hover:bg-gray-50">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-mono text-sm font-semibold">{mission.mission_number}</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(mission.status)}`}>
-                        {mission.status}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      <p>{mission.departure_city} → {mission.arrival_city}</p>
-                      <div className="flex items-center mt-1 text-xs">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {new Date(mission.scheduled_date).toLocaleDateString('fr-FR')}
+                recentMissions.map((mission) => {
+                  const status = normalizeMissionStatus(mission.status);
+                  return (
+                    <div key={mission.id} className="p-4 hover:bg-gray-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-mono text-sm font-semibold">{mission.mission_number}</span>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${getMissionStatusBadgeClass(status)}`}
+                        >
+                          {getMissionStatusLabel(status)}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <p>
+                          {mission.departure_city} → {mission.arrival_city}
+                        </p>
+                        <div className="flex items-center mt-1 text-xs">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {new Date(mission.scheduled_date).toLocaleDateString('fr-FR')}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -190,9 +189,7 @@ export default function AdminDashboard() {
             </div>
             <div className="divide-y max-h-[500px] overflow-y-auto">
               {pendingQuotes.length === 0 ? (
-                <div className="p-6 text-center text-gray-500">
-                  Aucun devis en attente
-                </div>
+                <div className="p-6 text-center text-gray-500">Aucun devis en attente</div>
               ) : (
                 pendingQuotes.map((quote) => (
                   <div key={quote.id} className="p-4 hover:bg-gray-50">
@@ -203,11 +200,11 @@ export default function AdminDashboard() {
                       </span>
                     </div>
                     <div className="text-sm text-gray-600">
-                      <p>{quote.departure_location} → {quote.arrival_location}</p>
+                      <p>
+                        {quote.departure_location} → {quote.arrival_location}
+                      </p>
                       <p className="text-xs mt-1">Type: {quote.vehicle_type}</p>
-                      {quote.company_name && (
-                        <p className="text-xs text-blue-600">{quote.company_name}</p>
-                      )}
+                      {quote.company_name && <p className="text-xs text-blue-600">{quote.company_name}</p>}
                     </div>
                   </div>
                 ))
