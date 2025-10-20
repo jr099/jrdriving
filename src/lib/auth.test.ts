@@ -1,23 +1,11 @@
 import { strict as assert } from 'node:assert';
 import test from 'node:test';
 
-const processEnv = (((globalThis as any).process ?? ((globalThis as any).process = {})).env ??=
-  {} as Record<string, string>);
-
-processEnv.VITE_SUPABASE_URL = 'https://test.supabase.local';
-processEnv.VITE_SUPABASE_ANON_KEY = 'test-anon-key';
-
 test('requireAuth redirects to login when no session is available', async () => {
-  const [{ supabase }, { requireAuth }] = await Promise.all([
-    import('./supabase.js'),
-    import('./auth.js'),
-  ]);
+  const { requireAuth } = await import('./auth.js');
 
-  const originalGetSession = supabase.auth.getSession;
-  supabase.auth.getSession = async () => ({
-    data: { session: null },
-    error: null,
-  } as any);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(null, { status: 401 });
 
   const request = new Request('https://app.local/client?foo=bar');
   let response: Response | null = null;
@@ -27,7 +15,7 @@ test('requireAuth redirects to login when no session is available', async () => 
   } catch (error) {
     response = error as Response;
   } finally {
-    supabase.auth.getSession = originalGetSession;
+    globalThis.fetch = originalFetch;
   }
 
   assert.ok(response, 'Expected a redirect response');

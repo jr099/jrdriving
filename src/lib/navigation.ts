@@ -1,4 +1,4 @@
-import type { Profile } from './supabase';
+import type { Profile } from './api-types';
 
 export type AppPage =
   | 'home'

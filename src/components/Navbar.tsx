@@ -77,7 +77,7 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <User className="h-5 w-5" />
-                  <span className="text-sm">{profile?.full_name}</span>
+                  <span className="text-sm">{profile?.fullName}</span>
                 </div>
                 <button
                   onClick={handleSignOut}
@@ -128,7 +128,7 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
 
             {user ? (
               <>
-                <div className="px-4 py-2 text-sm text-gray-400">{profile?.full_name}</div>
+                <div className="px-4 py-2 text-sm text-gray-400">{profile?.fullName}</div>
                 <button
                   onClick={() => {
                     handleSignOut();

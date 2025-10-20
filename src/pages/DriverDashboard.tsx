@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Truck, Clock, MapPin, DollarSign, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
-import { supabase, Mission } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchDriverDashboard, updateMissionStatus as updateMissionStatusRequest } from '../lib/api';
+import type { Mission } from '../lib/api-types';
 
 export default function DriverDashboard() {
   const { profile } = useAuth();
@@ -15,64 +16,27 @@ export default function DriverDashboard() {
   });
 
   useEffect(() => {
-    loadMissions();
-  }, [profile]);
-
-  const loadMissions = async () => {
     if (!profile) return;
 
-    try {
-      const { data: driverData } = await supabase
-        .from('drivers')
-        .select('id, total_missions, total_kilometers')
-        .eq('user_id', profile.id)
-        .maybeSingle();
-
-      if (!driverData) {
+    (async () => {
+      try {
+        const { stats: driverStats, missions } = await fetchDriverDashboard();
+        setMissions(missions);
+        setStats(driverStats);
+      } catch (error) {
+        console.error('Error loading missions:', error);
+      } finally {
         setLoading(false);
-        return;
       }
+    })();
+  }, [profile]);
 
-      const { data: missionsData, error } = await supabase
-        .from('missions')
-        .select('*')
-        .eq('driver_id', driverData.id)
-        .order('scheduled_date', { ascending: false });
-
-      if (error) throw error;
-
-      setMissions(missionsData || []);
-      setStats({
-        totalMissions: driverData.total_missions || 0,
-        inProgress: (missionsData || []).filter((m: Mission) => m.status === 'in_progress').length,
-        completed: (missionsData || []).filter((m: Mission) => m.status === 'completed').length,
-        totalKm: driverData.total_kilometers || 0,
-      });
-    } catch (error) {
-      console.error('Error loading missions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateMissionStatus = async (missionId: string, newStatus: Mission['status']) => {
+  const updateMissionStatus = async (missionId: number, newStatus: Mission['status']) => {
     try {
-      const updates: any = { status: newStatus };
-
-      if (newStatus === 'in_progress') {
-        updates.actual_start_time = new Date().toISOString();
-      } else if (newStatus === 'completed') {
-        updates.actual_end_time = new Date().toISOString();
-      }
-
-      const { error } = await supabase
-        .from('missions')
-        .update(updates)
-        .eq('id', missionId);
-
-      if (error) throw error;
-
-      loadMissions();
+      await updateMissionStatusRequest(missionId, newStatus);
+      const { stats: driverStats, missions } = await fetchDriverDashboard();
+      setMissions(missions);
+      setStats(driverStats);
     } catch (error) {
       console.error('Error updating mission:', error);
     }
@@ -130,7 +94,7 @@ export default function DriverDashboard() {
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
             Tableau de bord chauffeur
           </h1>
-          <p className="text-gray-600">Bienvenue, {profile?.full_name}</p>
+          <p className="text-gray-600">Bienvenue, {profile?.fullName}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -193,7 +157,7 @@ export default function DriverDashboard() {
                     <div className="flex-1 mb-4 lg:mb-0">
                       <div className="flex items-center gap-3 mb-3">
                         <span className="font-mono font-semibold text-slate-900">
-                          {mission.mission_number}
+                          {mission.missionNumber}
                         </span>
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(mission.status)}`}>
                           {getStatusText(mission.status)}
@@ -212,7 +176,7 @@ export default function DriverDashboard() {
                             <div>
                               <p className="font-semibold text-gray-900">Départ</p>
                               <p className="text-gray-600">
-                                {mission.departure_address}, {mission.departure_city}
+                                {mission.departureAddress}, {mission.departureCity}
                               </p>
                             </div>
                           </div>
@@ -224,7 +188,7 @@ export default function DriverDashboard() {
                             <div>
                               <p className="font-semibold text-gray-900">Arrivée</p>
                               <p className="text-gray-600">
-                                {mission.arrival_address}, {mission.arrival_city}
+                                {mission.arrivalAddress}, {mission.arrivalCity}
                               </p>
                             </div>
                           </div>
@@ -232,14 +196,14 @@ export default function DriverDashboard() {
 
                         <div className="flex items-center text-gray-600">
                           <Calendar className="h-4 w-4 mr-2" />
-                          {new Date(mission.scheduled_date).toLocaleDateString('fr-FR')}
-                          {mission.scheduled_time && ` à ${mission.scheduled_time}`}
+                          {new Date(mission.scheduledDate).toLocaleDateString('fr-FR')}
+                          {mission.scheduledTime && ` à ${mission.scheduledTime}`}
                         </div>
 
-                        {mission.distance_km && (
+                        {mission.distanceKm && (
                           <div className="flex items-center text-gray-600">
                             <MapPin className="h-4 w-4 mr-2" />
-                            {mission.distance_km} km
+                            {mission.distanceKm} km
                           </div>
                         )}
 

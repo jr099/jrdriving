@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Users, Truck, FileText, DollarSign, TrendingUp, Clock } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { fetchAdminDashboard } from '../lib/api';
+import type { Mission, Quote } from '../lib/api-types';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -11,8 +12,8 @@ export default function AdminDashboard() {
     pendingQuotes: 0,
     revenue: 0,
   });
-  const [recentMissions, setRecentMissions] = useState<any[]>([]);
-  const [pendingQuotes, setPendingQuotes] = useState<any[]>([]);
+  const [recentMissions, setRecentMissions] = useState<Mission[]>([]);
+  const [pendingQuotes, setPendingQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,31 +22,10 @@ export default function AdminDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const [missionsRes, driversRes, clientsRes, quotesRes, recentMissionsRes] = await Promise.all([
-        supabase.from('missions').select('id, status, price'),
-        supabase.from('drivers').select('id'),
-        supabase.from('clients').select('id'),
-        supabase.from('quotes').select('*').eq('status', 'new'),
-        supabase.from('missions').select('*').order('created_at', { ascending: false }).limit(5),
-      ]);
-
-      const missions = missionsRes.data || [];
-      const activeMissions = missions.filter((m) => m.status === 'in_progress' || m.status === 'assigned');
-      const revenue = missions
-        .filter((m) => m.status === 'completed' && m.price)
-        .reduce((sum, m) => sum + (m.price || 0), 0);
-
-      setStats({
-        totalMissions: missions.length,
-        activeMissions: activeMissions.length,
-        totalDrivers: driversRes.data?.length || 0,
-        totalClients: clientsRes.data?.length || 0,
-        pendingQuotes: quotesRes.data?.length || 0,
-        revenue,
-      });
-
-      setRecentMissions(recentMissionsRes.data || []);
-      setPendingQuotes(quotesRes.data || []);
+      const { stats: dashboardStats, recentMissions, pendingQuotes } = await fetchAdminDashboard();
+      setStats(dashboardStats);
+      setRecentMissions(recentMissions);
+      setPendingQuotes(pendingQuotes);
     } catch (error) {
       console.error('Error loading dashboard:', error);
     } finally {
@@ -166,16 +146,16 @@ export default function AdminDashboard() {
                 recentMissions.map((mission) => (
                   <div key={mission.id} className="p-4 hover:bg-gray-50">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-mono text-sm font-semibold">{mission.mission_number}</span>
+                      <span className="font-mono text-sm font-semibold">{mission.missionNumber}</span>
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(mission.status)}`}>
                         {mission.status}
                       </span>
                     </div>
                     <div className="text-sm text-gray-600">
-                      <p>{mission.departure_city} → {mission.arrival_city}</p>
+                      <p>{mission.departureCity} → {mission.arrivalCity}</p>
                       <div className="flex items-center mt-1 text-xs">
                         <Clock className="h-3 w-3 mr-1" />
-                        {new Date(mission.scheduled_date).toLocaleDateString('fr-FR')}
+                        {new Date(mission.scheduledDate).toLocaleDateString('fr-FR')}
                       </div>
                     </div>
                   </div>
@@ -197,16 +177,16 @@ export default function AdminDashboard() {
                 pendingQuotes.map((quote) => (
                   <div key={quote.id} className="p-4 hover:bg-gray-50">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-semibold text-sm">{quote.full_name}</span>
+                      <span className="font-semibold text-sm">{quote.fullName}</span>
                       <span className="text-xs text-gray-500">
-                        {new Date(quote.created_at).toLocaleDateString('fr-FR')}
+                        {new Date(quote.createdAt).toLocaleDateString('fr-FR')}
                       </span>
                     </div>
                     <div className="text-sm text-gray-600">
-                      <p>{quote.departure_location} → {quote.arrival_location}</p>
-                      <p className="text-xs mt-1">Type: {quote.vehicle_type}</p>
-                      {quote.company_name && (
-                        <p className="text-xs text-blue-600">{quote.company_name}</p>
+                      <p>{quote.departureLocation} → {quote.arrivalLocation}</p>
+                      <p className="text-xs mt-1">Type: {quote.vehicleType}</p>
+                      {quote.companyName && (
+                        <p className="text-xs text-blue-600">{quote.companyName}</p>
                       )}
                     </div>
                   </div>
