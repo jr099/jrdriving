@@ -23,6 +23,16 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN ?? (NODE_ENV === 'production' ? 'htt
 const COOKIE_NAME = process.env.AUTH_COOKIE_NAME ?? 'jrdriving_token';
 const COOKIE_MAX_AGE = numberFromEnv(process.env.AUTH_COOKIE_MAX_AGE, 60 * 60 * 24 * 7) * 1000; // ms
 
+type SameSiteOption = 'lax' | 'strict' | 'none';
+const parseSameSite = (value: string | undefined, fallback: SameSiteOption): SameSiteOption => {
+  if (!value) return fallback;
+  const v = value.toLowerCase();
+  return v === 'lax' || v === 'strict' || v === 'none' ? (v as SameSiteOption) : fallback;
+};
+// Par défaut: 'lax'. Si vous servez l’API sur un domaine différent du front,
+// utilisez AUTH_COOKIE_SAME_SITE=none (et le cookie sera automatiquement `secure`).
+const AUTH_COOKIE_SAME_SITE = parseSameSite(process.env.AUTH_COOKIE_SAME_SITE, 'lax');
+
 export const env = Object.freeze({
   NODE_ENV,
   PORT,
@@ -32,6 +42,7 @@ export const env = Object.freeze({
   CORS_ORIGIN,
   COOKIE_NAME,
   COOKIE_MAX_AGE,
+  AUTH_COOKIE_SAME_SITE,
 });
 
 // Validation: échec fort en production

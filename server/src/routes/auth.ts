@@ -27,7 +27,7 @@ function setAuthCookie(res: import('express').Response, token: string) {
   res.cookie(env.COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: env.NODE_ENV === 'production',
+    secure: env.NODE_ENV === 'production' || env.AUTH_COOKIE_SAME_SITE === 'none',
     maxAge: env.COOKIE_MAX_AGE,
   });
 }
@@ -149,7 +149,7 @@ router.post('/logout', (req, res) => {
   res.clearCookie(env.COOKIE_NAME, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: env.NODE_ENV === 'production',
+    secure: env.NODE_ENV === 'production' || env.AUTH_COOKIE_SAME_SITE === 'none',
   });
 
   return res.status(204).send();
