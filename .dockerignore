@@ -1,12 +1,24 @@
 node_modules
+server/node_modules
 npm-debug.log
+**/*.log
 .git
 .gitignore
 .vscode
+.idea
 dist
 server/dist
 build
-Dockerfile
-docker-compose.yml
-**/.DS_Store
+coverage
+.cache
+.turbo
 
+# Ne pas envoyer de secrets en build
+.env
+.env.*
+server/.env
+server/.env.*
+
+# Fichiers locaux et OS
+**/.DS_Store
+Thumbs.db
