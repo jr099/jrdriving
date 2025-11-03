@@ -21,6 +21,8 @@ ENV NODE_ENV=production
 # Installer uniquement les dépendances nécessaires à l'exécution
 COPY package*.json ./
 RUN npm ci --omit=dev
+# Fournir un package.json local au dossier server pour forcer CommonJS
+COPY server/package.json ./server/package.json
 # Copier l'artefact compilé du serveur
 COPY --from=build /app/server/dist ./server/dist
 
