@@ -1,4 +1,4 @@
-import { TriangleAlert } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { usePageNavigation } from '../hooks/usePageNavigation';
 
 export default function NotFound() {
@@ -7,7 +7,7 @@ export default function NotFound() {
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
       <div className="bg-orange-100 text-orange-600 rounded-full p-6 mb-6">
-        <TriangleAlert className="h-12 w-12" />
+        <AlertTriangle className="h-12 w-12" />
       </div>
       <h1 className="text-4xl font-bold text-slate-900 mb-4">Page introuvable</h1>
       <p className="text-gray-600 mb-6 max-w-lg">
