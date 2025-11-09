@@ -7,14 +7,15 @@ export const apiClient = axios.create({
 
 export function extractErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
-    return (
-      (error.response?.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data &&
-        typeof (error.response.data as any).message === 'string'
-        ? (error.response.data as any).message
-        : undefined) ?? error.message ?? 'Une erreur est survenue'
-    );
+    const data = error.response?.data;
+    if (data && typeof data === 'object' && 'message' in data) {
+      const message = (data as { message?: unknown }).message;
+      if (typeof message === 'string') {
+        return message;
+      }
+    }
+
+    return error.message ?? 'Une erreur est survenue';
   }
 
   if (error instanceof Error) {

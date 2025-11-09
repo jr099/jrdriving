@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { LogIn, UserPlus, Truck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import type { Profile } from '../lib/api-types';
 import { getRoleDefaultPage } from '../lib/navigation';
 import { extractErrorMessage } from '../lib/api-client';
 
@@ -9,14 +8,22 @@ type LoginProps = {
   onNavigate: (page: string) => void;
 };
 
+type SignupRole = 'client' | 'driver';
+
 export default function Login({ onNavigate }: LoginProps) {
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    email: string;
+    password: string;
+    fullName: string;
+    phone: string;
+    role: SignupRole;
+  }>({
     email: '',
     password: '',
     fullName: '',
     phone: '',
-    role: 'client' as Profile['role'],
+    role: 'client',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -43,10 +50,11 @@ export default function Login({ onNavigate }: LoginProps) {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === 'role' ? (value as SignupRole) : value,
+    }));
   };
 
   return (
@@ -143,6 +151,13 @@ export default function Login({ onNavigate }: LoginProps) {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               placeholder="********"
             />
+            <button
+              type="button"
+              onClick={() => onNavigate('forgotPassword')}
+              className="mt-2 text-sm text-orange-600 hover:underline"
+            >
+              Mot de passe oublié ?
+            </button>
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}

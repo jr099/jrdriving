@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Users, Truck, FileText, DollarSign, TrendingUp, Clock } from 'lucide-react';
 import { fetchAdminDashboard } from '../lib/api';
-import type { Mission, Quote } from '../lib/api-types';
+import type { DriverApplication, Mission, Quote } from '../lib/api-types';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -11,27 +11,31 @@ export default function AdminDashboard() {
     totalClients: 0,
     pendingQuotes: 0,
     revenue: 0,
+    punctualityRate: 100,
   });
   const [recentMissions, setRecentMissions] = useState<Mission[]>([]);
   const [pendingQuotes, setPendingQuotes] = useState<Quote[]>([]);
+  const [driverApplications, setDriverApplications] = useState<DriverApplication[]>([]);
+  const [aiInsights, setAiInsights] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadDashboardData();
+    (async () => {
+      try {
+        const { stats: dashboardStats, recentMissions, pendingQuotes, driverApplications, aiInsights } =
+          await fetchAdminDashboard();
+        setStats(dashboardStats);
+        setRecentMissions(recentMissions);
+        setPendingQuotes(pendingQuotes);
+        setDriverApplications(driverApplications);
+        setAiInsights(aiInsights);
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
-
-  const loadDashboardData = async () => {
-    try {
-      const { stats: dashboardStats, recentMissions, pendingQuotes } = await fetchAdminDashboard();
-      setStats(dashboardStats);
-      setRecentMissions(recentMissions);
-      setPendingQuotes(pendingQuotes);
-    } catch (error) {
-      console.error('Error loading dashboard:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -70,66 +74,18 @@ export default function AdminDashboard() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Total missions</p>
-                <p className="text-3xl font-bold text-slate-900">{stats.totalMissions}</p>
-                <p className="text-xs text-gray-500 mt-1">{stats.activeMissions} actives</p>
-              </div>
-              <Truck className="h-12 w-12 text-blue-600" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Chauffeurs</p>
-                <p className="text-3xl font-bold text-slate-900">{stats.totalDrivers}</p>
-              </div>
-              <Users className="h-12 w-12 text-green-600" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Clients</p>
-                <p className="text-3xl font-bold text-slate-900">{stats.totalClients}</p>
-              </div>
-              <Users className="h-12 w-12 text-orange-600" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Devis en attente</p>
-                <p className="text-3xl font-bold text-yellow-600">{stats.pendingQuotes}</p>
-              </div>
-              <FileText className="h-12 w-12 text-yellow-600" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Chiffre d'affaires</p>
-                <p className="text-3xl font-bold text-green-600">{stats.revenue.toFixed(0)} €</p>
-              </div>
-              <DollarSign className="h-12 w-12 text-green-600" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Taux de réussite</p>
-                <p className="text-3xl font-bold text-blue-600">98%</p>
-              </div>
-              <TrendingUp className="h-12 w-12 text-blue-600" />
-            </div>
-          </div>
+          <StatCard title="Total missions" value={`${stats.totalMissions}`} subtitle={`${stats.activeMissions} actives`} icon={<Truck className="h-12 w-12 text-blue-600" />} />
+          <StatCard title="Chauffeurs" value={`${stats.totalDrivers}`} icon={<Users className="h-12 w-12 text-green-600" />} />
+          <StatCard title="Clients" value={`${stats.totalClients}`} icon={<Users className="h-12 w-12 text-orange-600" />} />
+          <StatCard title="Devis en attente" value={`${stats.pendingQuotes}`} icon={<FileText className="h-12 w-12 text-yellow-600" />} valueClass="text-yellow-600" />
+          <StatCard title="Chiffre d'affaires" value={`${stats.revenue.toFixed(0)} €`} icon={<DollarSign className="h-12 w-12 text-green-600" />} valueClass="text-green-600" />
+          <StatCard
+            title="Ponctualité"
+            value={`${stats.punctualityRate}%`}
+            subtitle="missions livrées dans les délais"
+            icon={<TrendingUp className="h-12 w-12 text-blue-600" />}
+            valueClass="text-blue-600"
+          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -139,9 +95,7 @@ export default function AdminDashboard() {
             </div>
             <div className="divide-y max-h-[500px] overflow-y-auto">
               {recentMissions.length === 0 ? (
-                <div className="p-6 text-center text-gray-500">
-                  Aucune mission
-                </div>
+                <div className="p-6 text-center text-gray-500">Aucune mission</div>
               ) : (
                 recentMissions.map((mission) => (
                   <div key={mission.id} className="p-4 hover:bg-gray-50">
@@ -170,9 +124,7 @@ export default function AdminDashboard() {
             </div>
             <div className="divide-y max-h-[500px] overflow-y-auto">
               {pendingQuotes.length === 0 ? (
-                <div className="p-6 text-center text-gray-500">
-                  Aucun devis en attente
-                </div>
+                <div className="p-6 text-center text-gray-500">Aucun devis en attente</div>
               ) : (
                 pendingQuotes.map((quote) => (
                   <div key={quote.id} className="p-4 hover:bg-gray-50">
@@ -182,11 +134,24 @@ export default function AdminDashboard() {
                         {new Date(quote.createdAt).toLocaleDateString('fr-FR')}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-600 space-y-1">
                       <p>{quote.departureLocation} → {quote.arrivalLocation}</p>
-                      <p className="text-xs mt-1">Type: {quote.vehicleType}</p>
-                      {quote.companyName && (
-                        <p className="text-xs text-blue-600">{quote.companyName}</p>
+                      <p className="text-xs">Type: {quote.vehicleType}</p>
+                      {quote.companyName && <p className="text-xs text-blue-600">{quote.companyName}</p>}
+                      {quote.attachments && quote.attachments.length > 0 && (
+                        <div className="pt-2 space-y-1 text-xs">
+                          {quote.attachments.map((file) => (
+                            <a
+                              key={file.id}
+                              href={`/api/quotes/${quote.id}/attachments/${file.id}`}
+                              className="text-orange-600 hover:text-orange-700 flex items-center gap-1"
+                            >
+                              <FileText className="h-4 w-4" />
+                              {file.fileName}
+                              <span className="text-gray-400">({(file.fileSize / 1024).toFixed(0)} Ko)</span>
+                            </a>
+                          ))}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -196,7 +161,66 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="mt-8 bg-gradient-to-r from-orange-600 to-orange-700 rounded-xl shadow-lg p-8 text-white">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+          <div className="bg-white rounded-xl shadow-lg">
+            <div className="px-6 py-4 border-b">
+              <h2 className="text-xl font-bold text-slate-900">Candidatures chauffeurs</h2>
+            </div>
+            <div className="divide-y max-h-[500px] overflow-y-auto">
+              {driverApplications.length === 0 ? (
+                <div className="p-6 text-center text-gray-500">Aucune nouvelle candidature</div>
+              ) : (
+                driverApplications.map((application) => (
+                  <div key={application.id} className="p-5 hover:bg-gray-50">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <p className="font-semibold text-slate-900">{application.fullName}</p>
+                        <p className="text-xs text-gray-500">{application.email} · {application.phone}</p>
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {new Date(application.createdAt).toLocaleDateString('fr-FR')}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-600 space-y-1">
+                      <p>Expérience: {application.yearsExperience} ans</p>
+                      <p>Permis: {application.licenseTypes.join(', ')}</p>
+                      <p>Zones: {application.regions.join(', ')}</p>
+                    </div>
+                    {application.attachments.length > 0 && (
+                      <div className="mt-3 space-y-1 text-xs">
+                        {application.attachments.map((file) => (
+                          <a
+                            key={file.id}
+                            href={`/api/recruitment/applications/${application.id}/attachments/${file.id}`}
+                            className="text-orange-600 hover:text-orange-700 flex items-center gap-1"
+                          >
+                            <FileText className="h-4 w-4" />
+                            {file.fileName}
+                            <span className="text-gray-400">({(file.fileSize / 1024).toFixed(0)} Ko)</span>
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-orange-600 to-orange-700 rounded-xl shadow-lg p-8 text-white">
+            <h2 className="text-2xl font-bold mb-4">Insights IA</h2>
+            <ul className="space-y-3 text-sm">
+              {aiInsights.map((insight, index) => (
+                <li key={index} className="flex items-start gap-3">
+                  <span className="mt-1 h-2 w-2 rounded-full bg-white"></span>
+                  <span>{insight}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-8 bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl shadow-lg p-8 text-white">
           <h2 className="text-2xl font-bold mb-4">Actions rapides</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button className="bg-white bg-opacity-20 hover:bg-opacity-30 px-6 py-3 rounded-lg font-semibold transition-all">
@@ -210,6 +234,33 @@ export default function AdminDashboard() {
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({
+  title,
+  value,
+  subtitle,
+  icon,
+  valueClass,
+}: {
+  title: string;
+  value: string;
+  subtitle?: string;
+  icon: ReactNode;
+  valueClass?: string;
+}) {
+  return (
+    <div className="bg-white rounded-xl shadow-lg p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-600 mb-1">{title}</p>
+          <p className={`text-3xl font-bold ${valueClass ?? 'text-slate-900'}`}>{value}</p>
+          {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+        </div>
+        {icon}
       </div>
     </div>
   );

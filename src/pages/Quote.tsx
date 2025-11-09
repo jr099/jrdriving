@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Truck, Calendar, MapPin, Upload, CheckCircle } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { Truck, Calendar, MapPin, Upload, CheckCircle, FileText, Trash2 } from 'lucide-react';
 import { submitQuote } from '../lib/api';
 import { extractErrorMessage } from '../lib/api-client';
+import type { QuoteAttachmentPayload } from '../lib/api-types';
 
 type QuoteProps = {
   onNavigate: (page: string) => void;
@@ -20,9 +21,50 @@ export default function Quote({ onNavigate }: QuoteProps) {
     message: '',
   });
 
+  const [attachments, setAttachments] = useState<QuoteAttachmentPayload[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const toBase64 = useCallback((file: File) => {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result === 'string') {
+          const base64 = result.split(',').pop() ?? '';
+          resolve(base64);
+        } else {
+          reject(new Error('Impossible de lire le fichier.'));
+        }
+      };
+      reader.onerror = () => reject(reader.error ?? new Error('Impossible de lire le fichier.'));
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  const handleFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const nextFiles: QuoteAttachmentPayload[] = [];
+    for (const file of Array.from(files)) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError(`Le fichier ${file.name} dépasse la taille maximale autorisée (5 Mo).`);
+        continue;
+      }
+
+      const base64 = await toBase64(file);
+      nextFiles.push({ name: file.name, type: file.type, size: file.size, data: base64 });
+    }
+
+    setAttachments((prev) => [...prev, ...nextFiles]);
+    event.target.value = '';
+  }, [toBase64]);
+
+  const removeAttachment = useCallback((index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +82,7 @@ export default function Quote({ onNavigate }: QuoteProps) {
         arrivalLocation: formData.arrivalLocation,
         preferredDate: formData.preferredDate || undefined,
         message: formData.message || undefined,
+        attachments: attachments.length > 0 ? attachments : undefined,
       });
 
       setSubmitted(true);
@@ -94,6 +137,7 @@ export default function Quote({ onNavigate }: QuoteProps) {
                   preferredDate: '',
                   message: '',
                 });
+                setAttachments([]);
               }}
               className="px-6 py-3 bg-white border-2 border-gray-300 hover:border-gray-400 text-slate-900 font-semibold rounded-lg transition-colors"
             >
@@ -276,6 +320,39 @@ export default function Quote({ onNavigate }: QuoteProps) {
                   <p className="text-sm text-gray-600">
                     Vous pourrez joindre des documents (carte grise, photos, etc.) après validation de votre demande.
                   </p>
+                  <div className="mt-4">
+                    <label className="flex flex-col items-center justify-center w-full border-2 border-dashed border-blue-300 rounded-lg py-6 cursor-pointer hover:border-blue-500 transition-colors">
+                      <Upload className="h-6 w-6 text-blue-600 mb-2" />
+                      <span className="text-sm text-blue-700 font-semibold">Importer des fichiers (max 5 Mo)</span>
+                      <input type="file" className="hidden" multiple onChange={handleFileChange} />
+                    </label>
+                    {attachments.length > 0 && (
+                      <ul className="mt-4 space-y-2">
+                        {attachments.map((file, index) => (
+                          <li
+                            key={`${file.name}-${index}`}
+                            className="flex items-center justify-between bg-white border border-blue-100 rounded-lg px-4 py-2"
+                          >
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-5 w-5 text-blue-600" />
+                              <div>
+                                <p className="text-sm font-semibold text-slate-900">{file.name}</p>
+                                <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(0)} Ko</p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeAttachment(index)}
+                              className="text-red-600 hover:text-red-700"
+                              aria-label={`Supprimer ${file.name}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

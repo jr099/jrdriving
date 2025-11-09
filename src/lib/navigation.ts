@@ -9,6 +9,10 @@ export type AppPage =
   | 'client'
   | 'driver'
   | 'admin'
+  | 'tracking'
+  | 'recruitment'
+  | 'forgotPassword'
+  | 'resetPassword'
   | 'legal'
   | 'terms'
   | 'privacy';
@@ -22,6 +26,10 @@ export const PAGE_TO_PATH: Record<AppPage, string> = {
   client: '/client',
   driver: '/chauffeur',
   admin: '/admin',
+  tracking: '/suivi-mission',
+  recruitment: '/recrutement-chauffeurs',
+  forgotPassword: '/mot-de-passe-oublie',
+  resetPassword: '/reinitialiser-mot-de-passe',
   legal: '/mentions-legales',
   terms: '/conditions-generales',
   privacy: '/politique-confidentialite',
@@ -35,6 +43,10 @@ const ALIAS_TO_PAGE: Record<string, AppPage> = {
   contact: 'contact',
   login: 'login',
   services: 'services',
+  'suivi-mission': 'tracking',
+  'recrutement-chauffeurs': 'recruitment',
+  'mot-de-passe-oublie': 'forgotPassword',
+  'reinitialiser-mot-de-passe': 'resetPassword',
   'mentions-legales': 'legal',
   'conditions-generales': 'terms',
   'politique-confidentialite': 'privacy',

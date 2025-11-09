@@ -13,6 +13,9 @@ const sanitizePort = (value: number, fallback: number): number => {
   return n >= 1 && n <= 65535 ? n : fallback;
 };
 
+const parseWebhookList = (value: string | undefined): string[] =>
+  value?.split(',').map((item) => item.trim()).filter(Boolean) ?? [];
+
 const NODE_ENV = process.env.NODE_ENV ?? 'development';
 const PORT = sanitizePort(numberFromEnv(process.env.PORT, 4000), 4000);
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -22,6 +25,10 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '7d';
 const CORS_ORIGIN = process.env.CORS_ORIGIN ?? (NODE_ENV === 'production' ? 'https://jrdriving.galaxjr.digital' : undefined);
 const COOKIE_NAME = process.env.AUTH_COOKIE_NAME ?? 'jrdriving_token';
 const COOKIE_MAX_AGE = numberFromEnv(process.env.AUTH_COOKIE_MAX_AGE, 60 * 60 * 24 * 7) * 1000; // ms
+const AUTOMATION_QUOTE_WEBHOOKS = parseWebhookList(process.env.AUTOMATION_QUOTE_WEBHOOKS);
+const AUTOMATION_DRIVER_WEBHOOKS = parseWebhookList(process.env.AUTOMATION_DRIVER_WEBHOOKS);
+const MISSION_NOTIFICATION_WEBHOOKS = parseWebhookList(process.env.MISSION_NOTIFICATION_WEBHOOKS);
+const PASSWORD_RESET_WEBHOOKS = parseWebhookList(process.env.PASSWORD_RESET_WEBHOOKS);
 
 type SameSiteOption = 'lax' | 'strict' | 'none';
 const parseSameSite = (value: string | undefined, fallback: SameSiteOption): SameSiteOption => {
@@ -43,6 +50,10 @@ export const env = Object.freeze({
   COOKIE_NAME,
   COOKIE_MAX_AGE,
   AUTH_COOKIE_SAME_SITE,
+  AUTOMATION_QUOTE_WEBHOOKS,
+  AUTOMATION_DRIVER_WEBHOOKS,
+  MISSION_NOTIFICATION_WEBHOOKS,
+  PASSWORD_RESET_WEBHOOKS,
 });
 
 // Validation: échec fort en production

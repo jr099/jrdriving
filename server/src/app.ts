@@ -7,6 +7,7 @@ import adminRoutes from './routes/admin';
 import driverRoutes from './routes/drivers';
 import missionRoutes from './routes/missions';
 import quoteRoutes from './routes/quotes';
+import recruitmentRoutes from './routes/recruitment';
 import { env } from './env';
 
 export const app = express();
@@ -29,12 +30,14 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/missions', missionRoutes);
 app.use('/api/quotes', quoteRoutes);
+app.use('/api/recruitment', recruitmentRoutes);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  void _next;
   console.error('[api] Unhandled error:', error);
   res.status(500).json({ message: "Une erreur inattendue s'est produite." });
 });

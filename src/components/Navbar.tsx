@@ -26,6 +26,7 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
       ? [
           { name: 'Accueil', page: 'home' },
           { name: 'Services', page: 'services' },
+          { name: 'Suivi mission', page: 'tracking' },
           { name: 'Administration', page: 'admin' },
           { name: 'Contact', page: 'contact' },
         ]
@@ -33,17 +34,21 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
       ? [
           { name: 'Accueil', page: 'home' },
           { name: 'Mes Missions', page: 'driver' },
+          { name: 'Suivi mission', page: 'tracking' },
           { name: 'Contact', page: 'contact' },
         ]
       : [
           { name: 'Accueil', page: 'home' },
           { name: 'Services', page: 'services' },
+          { name: 'Suivi mission', page: 'tracking' },
           { name: 'Espace client', page: 'client' },
           { name: 'Contact', page: 'contact' },
         ]
     : [
         { name: 'Accueil', page: 'home' },
         { name: 'Services', page: 'services' },
+        { name: 'Suivi mission', page: 'tracking' },
+        { name: 'Devenir chauffeur', page: 'recruitment' },
         { name: 'Contact', page: 'contact' },
       ];
 

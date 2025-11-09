@@ -1,4 +1,4 @@
-import jwt, { type Secret, type SignOptions, type JwtPayload as LibJwtPayload } from 'jsonwebtoken';
+import jwt, { type Secret, type SignOptions } from 'jsonwebtoken';
 import { env } from '../env';
 
 export type JwtRole = 'admin' | 'driver' | 'client';
@@ -15,7 +15,7 @@ export function signAccessToken(payload: AccessTokenPayload): string {
 export function verifyAccessToken(token: string): AccessTokenPayload | null {
   try {
     return jwt.verify(token, env.JWT_SECRET as Secret) as unknown as AccessTokenPayload;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

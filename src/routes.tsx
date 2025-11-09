@@ -13,6 +13,10 @@ import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import NotFound from './pages/NotFound';
 import ClientDashboard from './pages/ClientDashboard';
+import Tracking from './pages/Tracking';
+import Recruitment from './pages/Recruitment';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import { requireRole } from './lib/auth';
 import { usePageNavigation } from './hooks/usePageNavigation';
 import { createRedirect } from './lib/redirect';
@@ -28,6 +32,10 @@ const HomeRoute = withNavigation(Home);
 const ServicesRoute = withNavigation(Services);
 const QuoteRoute = withNavigation(Quote);
 const LoginRoute = withNavigation(Login);
+const TrackingRoute = withNavigation(Tracking);
+const RecruitmentRoute = withNavigation(Recruitment);
+const ForgotPasswordRoute = withNavigation(ForgotPassword);
+const ResetPasswordRoute = withNavigation(ResetPassword);
 
 export const router = createBrowserRouter([
   {
@@ -39,6 +47,10 @@ export const router = createBrowserRouter([
       { path: 'devis', element: <QuoteRoute /> },
       { path: 'contact', element: <Contact /> },
       { path: 'login', element: <LoginRoute /> },
+      { path: 'suivi-mission', element: <TrackingRoute /> },
+      { path: 'recrutement-chauffeurs', element: <RecruitmentRoute /> },
+      { path: 'mot-de-passe-oublie', element: <ForgotPasswordRoute /> },
+      { path: 'reinitialiser-mot-de-passe', element: <ResetPasswordRoute /> },
       {
         path: 'client',
         loader: ({ request }) => requireRole(request, 'client'),

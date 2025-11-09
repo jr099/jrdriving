@@ -7,12 +7,12 @@ import { getPageFromPath } from './lib/navigation';
 import { usePageNavigation } from './hooks/usePageNavigation';
 
 export default function App() {
-  const { loading } = useAuth();
+  const { isLoading } = useAuth();
   const location = useLocation();
   const handleNavigate = usePageNavigation();
   const currentPage = getPageFromPath(location.pathname);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
