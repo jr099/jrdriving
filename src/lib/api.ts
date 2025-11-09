@@ -1,9 +1,12 @@
+import axios from 'axios';
 import { apiClient } from './api-client';
 import type {
   AdminDashboardPayload,
   AuthSession,
+  DriverApplicationPayload,
   DriverDashboardPayload,
   MissionStatus,
+  MissionTracking,
   QuotePayload,
 } from './api-types';
 
@@ -12,7 +15,7 @@ export async function fetchSession(): Promise<AuthSession | null> {
     const { data } = await apiClient.get<AuthSession>('/auth/session');
     return data;
   } catch (error) {
-    if ((error as any)?.response?.status === 401) {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
       return null;
     }
     throw error;
@@ -61,4 +64,21 @@ export async function updateMissionStatus(missionId: number, status: MissionStat
 
 export async function submitQuote(payload: QuotePayload): Promise<void> {
   await apiClient.post('/quotes', payload);
+}
+
+export async function submitDriverApplication(payload: DriverApplicationPayload): Promise<void> {
+  await apiClient.post('/recruitment', payload);
+}
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  await apiClient.post('/auth/forgot-password', { email });
+}
+
+export async function resetPassword(token: string, password: string): Promise<void> {
+  await apiClient.post('/auth/reset-password', { token, password });
+}
+
+export async function trackMission(missionNumber: string): Promise<MissionTracking> {
+  const { data } = await apiClient.get<{ mission: MissionTracking }>(`/missions/track/${encodeURIComponent(missionNumber)}`);
+  return data.mission;
 }

@@ -33,11 +33,29 @@ export default function Home({ onNavigate }: HomeProps) {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </button>
               <button
-                onClick={() => onNavigate('services')}
+                onClick={() => onNavigate('tracking')}
                 className="px-8 py-4 bg-white text-slate-900 hover:bg-gray-100 font-semibold rounded-lg transition-all transform hover:scale-105 shadow-xl"
               >
-                Découvrir nos services
+                Suivre une mission
               </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white py-12 border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+            <div>
+              <p className="text-sm font-semibold text-orange-600 uppercase tracking-wider">Ils nous font confiance</p>
+              <h2 className="text-2xl font-bold text-slate-900 mt-2">Réseau national de partenaires automobiles</h2>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-6 text-slate-500">
+              {['Locauto', 'FleetPro', 'HexaCar', 'Premium Motors', 'e-Mobility'].map((partner) => (
+                <span key={partner} className="text-lg font-semibold tracking-wide uppercase">
+                  {partner}
+                </span>
+              ))}
             </div>
           </div>
         </div>
@@ -171,6 +189,39 @@ export default function Home({ onNavigate }: HomeProps) {
                 <p className="font-semibold text-slate-900">Sophie L.</p>
                 <p className="text-sm text-gray-600">Particulier</p>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Devis instantané</h3>
+              <p className="text-sm text-gray-600 mb-4">Remplissez notre formulaire IA et recevez une estimation personnalisée.</p>
+              <button onClick={() => onNavigate('quote')} className="text-sm font-semibold text-orange-600 hover:text-orange-700">
+                Accéder au formulaire →
+              </button>
+            </div>
+            <div className="border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Hotline dédiée</h3>
+              <p className="text-sm text-gray-600 mb-4">+33 1 23 45 67 89 · Lundi - Samedi 7h à 21h.</p>
+              <a href="tel:+33123456789" className="text-sm font-semibold text-orange-600 hover:text-orange-700">
+                Appeler un conseiller →
+              </a>
+            </div>
+            <div className="border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Support WhatsApp</h3>
+              <p className="text-sm text-gray-600 mb-4">Suivi temps réel de vos missions et notifications automatiques.</p>
+              <a
+                href="https://wa.me/33612345678"
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm font-semibold text-orange-600 hover:text-orange-700"
+              >
+                Ouvrir la conversation →
+              </a>
             </div>
           </div>
         </div>

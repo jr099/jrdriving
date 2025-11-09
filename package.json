@@ -11,7 +11,9 @@
     "test": "rm -rf .test-dist && tsc --project tsconfig.test.json && for file in .test-dist/*.js; do mv \"$file\" \"${file%.js}.cjs\"; done && for file in .test-dist/*.cjs; do ln -s \"$(basename \"$file\")\" \"${file%.cjs}.js\"; done && node --test .test-dist/auth.test.cjs && rm -rf .test-dist",
     "server:dev": "tsx watch server/src/index.ts",
     "server:build": "tsc -p server/tsconfig.json",
-    "start": "node server/dist/index.js"
+    "start": "node server/dist/index.js",
+    "db:generate": "drizzle-kit generate --config server/drizzle.config.ts",
+    "db:migrate": "drizzle-kit push --config server/drizzle.config.ts"
   },
   "dependencies": {
     "axios": "^1.7.7",

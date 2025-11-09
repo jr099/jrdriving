@@ -44,6 +44,16 @@ export default function Footer({ onNavigate }: FooterProps) {
                 </button>
               </li>
               <li>
+                <button onClick={() => onNavigate('tracking')} className="hover:text-orange-500 transition-colors">
+                  Suivre une mission
+                </button>
+              </li>
+              <li>
+                <button onClick={() => onNavigate('recruitment')} className="hover:text-orange-500 transition-colors">
+                  Recrutement chauffeurs
+                </button>
+              </li>
+              <li>
                 <button onClick={() => onNavigate('contact')} className="hover:text-orange-500 transition-colors">
                   Contact
                 </button>
@@ -85,6 +95,17 @@ export default function Footer({ onNavigate }: FooterProps) {
                 <Phone className="h-4 w-4 mr-2 text-orange-500" />
                 <a href="tel:+33123456789" className="hover:text-orange-500 transition-colors">
                   +33 1 23 45 67 89
+                </a>
+              </li>
+              <li className="flex items-center">
+                <Phone className="h-4 w-4 mr-2 text-green-500" />
+                <a
+                  href="https://wa.me/33612345678"
+                  className="hover:text-orange-500 transition-colors"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  WhatsApp Business
                 </a>
               </li>
               <li className="flex items-start">

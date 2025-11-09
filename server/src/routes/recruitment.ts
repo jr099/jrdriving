@@ -1,14 +1,14 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { db, schema } from '../db';
-import { forwardQuoteToAutomations } from '../services/integrations';
-import { authenticate, authorize } from '../middleware/auth';
-import { and, eq } from 'drizzle-orm';
 import { Buffer } from 'node:buffer';
+import { db, schema } from '../db';
+import { forwardDriverApplication } from '../services/integrations';
+import { authenticate, authorize } from '../middleware/auth';
+import { eq, and } from 'drizzle-orm';
 import { resolveInsertId } from '../utils/db';
 
 const router = Router();
-const { quotes, quoteAttachments } = schema;
+const { driverApplications, driverApplicationAttachments } = schema;
 
 const attachmentSchema = z.object({
   name: z.string().min(1),
@@ -17,44 +17,48 @@ const attachmentSchema = z.object({
   data: z.string().min(1),
 });
 
-const quoteSchema = z.object({
+const applicationSchema = z.object({
   fullName: z.string().min(1),
   email: z.string().email(),
   phone: z.string().min(4),
-  companyName: z.string().optional(),
-  vehicleType: z.string().min(1),
-  departureLocation: z.string().min(1),
-  arrivalLocation: z.string().min(1),
-  preferredDate: z.string().optional(),
+  yearsExperience: z.number().int().min(0).max(50),
+  licenseTypes: z.array(z.string().min(1)).min(1),
+  regions: z.array(z.string().min(1)).min(1),
+  availability: z.string().min(1),
+  hasOwnVehicle: z.boolean(),
+  hasCompany: z.boolean(),
   message: z.string().optional(),
   attachments: z.array(attachmentSchema).optional(),
 });
 
 router.post('/', async (req, res, next) => {
   try {
-    const payload = quoteSchema.parse(req.body);
+    const payload = applicationSchema.parse({
+      ...req.body,
+      yearsExperience: Number(req.body?.yearsExperience ?? 0),
+    });
 
-    const quoteResult = await db
-      .insert(quotes)
+    const applicationResult = await db
+      .insert(driverApplications)
       .values({
         fullName: payload.fullName,
         email: payload.email,
         phone: payload.phone,
-        companyName: payload.companyName ?? null,
-        vehicleType: payload.vehicleType,
-        departureLocation: payload.departureLocation,
-        arrivalLocation: payload.arrivalLocation,
-        preferredDate: payload.preferredDate ? new Date(payload.preferredDate) : null,
+        yearsExperience: payload.yearsExperience,
+        licenseTypes: payload.licenseTypes,
+        regions: payload.regions,
+        availability: payload.availability,
+        hasOwnVehicle: payload.hasOwnVehicle ? 1 : 0,
+        hasCompany: payload.hasCompany ? 1 : 0,
         message: payload.message ?? null,
-        status: 'new',
       })
       .execute();
 
-    const insertId = resolveInsertId(quoteResult);
+    const applicationId = resolveInsertId(applicationResult);
 
-    if (payload.attachments && payload.attachments.length > 0 && typeof insertId === 'number') {
+    if (payload.attachments && payload.attachments.length > 0 && typeof applicationId === 'number') {
       const records = payload.attachments.map((attachment) => ({
-        quoteId: insertId,
+        applicationId,
         fileName: attachment.name,
         mimeType: attachment.type ?? null,
         fileSize: attachment.size,
@@ -62,27 +66,22 @@ router.post('/', async (req, res, next) => {
       }));
 
       if (records.length > 0) {
-        await db.insert(quoteAttachments).values(records).execute();
+        await db.insert(driverApplicationAttachments).values(records).execute();
       }
     }
 
-    await forwardQuoteToAutomations({
-      quote: {
-        id: insertId ?? 0,
-        fullName: payload.fullName,
-        email: payload.email,
-        phone: payload.phone,
-        companyName: payload.companyName ?? null,
-        vehicleType: payload.vehicleType,
-        departureLocation: payload.departureLocation,
-        arrivalLocation: payload.arrivalLocation,
-        preferredDate: payload.preferredDate ? new Date(payload.preferredDate) : null,
-        message: payload.message ?? null,
-        status: 'new',
-        estimatedPrice: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
+    await forwardDriverApplication({
+      id: applicationId ?? 0,
+      fullName: payload.fullName,
+      email: payload.email,
+      phone: payload.phone,
+      yearsExperience: payload.yearsExperience,
+      licenseTypes: payload.licenseTypes,
+      regions: payload.regions,
+      availability: payload.availability,
+      hasOwnVehicle: payload.hasOwnVehicle,
+      hasCompany: payload.hasCompany,
+      message: payload.message ?? null,
       attachments: payload.attachments?.map((item) => ({
         fileName: item.name,
         mimeType: item.type ?? null,
@@ -91,7 +90,7 @@ router.post('/', async (req, res, next) => {
       })),
     });
 
-    return res.status(201).json({ message: 'Demande de devis enregistrée.' });
+    return res.status(201).json({ message: 'Candidature enregistrée.' });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: 'Données invalides', details: error.flatten() });
@@ -102,22 +101,27 @@ router.post('/', async (req, res, next) => {
 });
 
 router.get(
-  '/:quoteId/attachments/:attachmentId',
+  '/applications/:applicationId/attachments/:attachmentId',
   authenticate,
   authorize('admin'),
   async (req, res, next) => {
     try {
-      const quoteId = Number(req.params.quoteId);
+      const applicationId = Number(req.params.applicationId);
       const attachmentId = Number(req.params.attachmentId);
 
-      if (Number.isNaN(quoteId) || Number.isNaN(attachmentId)) {
+      if (Number.isNaN(applicationId) || Number.isNaN(attachmentId)) {
         return res.status(400).json({ message: 'Identifiants invalides.' });
       }
 
       const [attachment] = await db
         .select()
-        .from(quoteAttachments)
-        .where(and(eq(quoteAttachments.id, attachmentId), eq(quoteAttachments.quoteId, quoteId)))
+        .from(driverApplicationAttachments)
+        .where(
+          and(
+            eq(driverApplicationAttachments.id, attachmentId),
+            eq(driverApplicationAttachments.applicationId, applicationId)
+          )
+        )
         .limit(1)
         .execute();
 

@@ -23,6 +23,47 @@ export interface AuthSession {
   profile: Profile;
 }
 
+export interface QuoteAttachment {
+  id: number;
+  fileName: string;
+  mimeType: string | null;
+  fileSize: number;
+  createdAt: string;
+}
+
+export interface QuoteAttachmentPayload {
+  name: string;
+  type?: string;
+  size: number;
+  data: string;
+}
+
+export interface DriverApplicationAttachment {
+  id: number;
+  fileName: string;
+  mimeType: string | null;
+  fileSize: number;
+  createdAt: string;
+}
+
+export interface DriverApplication {
+  id: number;
+  fullName: string;
+  email: string;
+  phone: string;
+  yearsExperience: number;
+  licenseTypes: string[];
+  regions: string[];
+  availability: string;
+  hasOwnVehicle: boolean;
+  hasCompany: boolean;
+  message: string | null;
+  status: 'new' | 'in_review' | 'approved' | 'rejected';
+  createdAt: string;
+  updatedAt: string;
+  attachments: DriverApplicationAttachment[];
+}
+
 export interface AdminDashboardStats {
   totalMissions: number;
   activeMissions: number;
@@ -30,6 +71,7 @@ export interface AdminDashboardStats {
   totalClients: number;
   pendingQuotes: number;
   revenue: number;
+  punctualityRate: number;
 }
 
 export interface Mission {
@@ -63,6 +105,8 @@ export interface AdminDashboardPayload {
   stats: AdminDashboardStats;
   recentMissions: Mission[];
   pendingQuotes: Quote[];
+  driverApplications: DriverApplication[];
+  aiInsights: string[];
 }
 
 export interface DriverDashboardStats {
@@ -92,6 +136,7 @@ export interface Quote {
   estimatedPrice: number | null;
   createdAt: string;
   updatedAt: string;
+  attachments?: QuoteAttachment[];
 }
 
 export interface QuotePayload {
@@ -104,4 +149,30 @@ export interface QuotePayload {
   arrivalLocation: string;
   preferredDate?: string | null;
   message?: string | null;
+  attachments?: QuoteAttachmentPayload[];
+}
+
+export interface DriverApplicationPayload {
+  fullName: string;
+  email: string;
+  phone: string;
+  yearsExperience: number;
+  licenseTypes: string[];
+  regions: string[];
+  availability: string;
+  hasOwnVehicle: boolean;
+  hasCompany: boolean;
+  message?: string | null;
+  attachments?: QuoteAttachmentPayload[];
+}
+
+export interface MissionTracking {
+  missionNumber: string;
+  status: MissionStatus;
+  priority: MissionPriority;
+  departureCity: string;
+  arrivalCity: string;
+  scheduledDate: string;
+  updatedAt: string;
+  driverName: string | null;
 }

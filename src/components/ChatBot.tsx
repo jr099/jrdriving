@@ -26,7 +26,8 @@ export default function ChatBot() {
       } else if (lowerInput.includes('contact') || lowerInput.includes('téléphone') || lowerInput.includes('email')) {
         response = 'Vous pouvez nous contacter par email à contact@jrdriving.galaxjr.digital ou par téléphone au +33 1 23 45 67 89. Notre équipe est disponible du lundi au vendredi de 8h à 18h.';
       } else if (lowerInput.includes('chauffeur') || lowerInput.includes('devenir')) {
-        response = 'Vous souhaitez rejoindre notre équipe de chauffeurs? Excellent! Contactez-nous pour connaître les conditions et les démarches à suivre.';
+        response =
+          "Vous souhaitez rejoindre notre équipe de chauffeurs? Remplissez notre formulaire de recrutement en ligne pour une réponse sous 48h!";
       } else {
         response = 'Je suis là pour vous aider! Vous pouvez me poser des questions sur nos services, demander un devis, suivre une mission ou nous contacter. Comment puis-je vous assister?';
       }
